@@ -1348,11 +1348,9 @@ NSS_SetDomesticPolicy(void)
     const PRUint16 *cipher;
 
     for (cipher = SSL_ImplementedCiphers; *cipher != 0; ++cipher) {
-        status = SSL_SetPolicy(*cipher, SSL_ALLOWED);
-        if (status != SECSuccess)
-            break;
+       SSL_SetPolicy(*cipher, SSL_ALLOWED);
     }
-    return status;
+    return SECSuccess;
 }
 
 SECStatus
