@@ -91,7 +91,8 @@ typedef enum {
     ssl_hmac_md5      = 3, 	/* TLS HMAC version of mac_md5 */
     ssl_hmac_sha      = 4, 	/* TLS HMAC version of mac_sha */
     ssl_hmac_sha256   = 5,
-    ssl_mac_aead      = 6
+    ssl_mac_aead      = 6,
+    ssl_hmac_sha384   = 7
 } SSLMACAlgorithm;
 
 typedef enum {
@@ -196,5 +197,15 @@ typedef enum {
 } SSLExtensionType;
 
 #define SSL_MAX_EXTENSIONS             11 /* doesn't include ssl_padding_xtn. */
+
+typedef enum {
+    ssl_dhe_group_none = 0,
+    ssl_ff_dhe_2048_group = 1,
+    ssl_ff_dhe_3072_group = 2,
+    ssl_ff_dhe_4096_group = 3,
+    ssl_ff_dhe_6144_group = 4,
+    ssl_ff_dhe_8192_group = 5,
+    ssl_dhe_group_max
+} SSLDHEGroupType;
 
 #endif /* __sslt_h_ */
