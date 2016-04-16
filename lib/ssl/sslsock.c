@@ -1193,8 +1193,17 @@ ssl_IsRemovedCipherSuite(PRInt32 suite)
     /* both ssl2 and export cipher suites disabled */
     if (SSL_IS_SSL2_CIPHER(suite))
         return PR_TRUE;
-    if (SSL_IsExportCipherSuite(suite))
-      return PR_TRUE;
+    if (SSL_IsExportCipherSuite(suite)) {
+        SSLCipherSuiteInfo csdef;
+        if (SSL_GetCipherSuiteInfo(suite, &csdef, sizeof(csdef)) != SECSuccess) {
+            /* failure to retrieve info, disable */
+            return PR_TRUE;
+        }
+        if (csdef.symCipher != ssl_calg_null) {
+            /* disable all except NULL ciphersuites */
+            return PR_TRUE;
+        }
+    }
 #endif /* NSS_NO_SSL2_NO_EXPORT */
     switch (suite) {
     case SSL_FORTEZZA_DMS_WITH_NULL_SHA:
