@@ -3959,7 +3959,20 @@ ssl3_InitHandshakeHashes(sslSocket *ss)
 	/* If we ever support ciphersuites where the PRF hash isn't SHA-256
 	 * then this will need to be updated. */
 	if (ss->version >= SSL_LIBRARY_VERSION_TLS_1_2) {
-	    ss->ssl3.hs.sha_obj = HASH_GetRawHashObject(HASH_AlgSHA256);
+        HASH_HashType ht;
+        CK_MECHANISM_TYPE hm;
+        SECOidTag ot;
+        SECOidData *hashOid;
+        
+        hm = ssl3_GetPrfHashMechanism(ss);
+        hashOid = SECOID_FindOIDByMechanism(hm);
+        if (hashOid == NULL) {
+            ssl_MapLowLevelError(SSL_ERROR_DIGEST_FAILURE);
+            return SECFailure;
+        }
+        ot = hashOid->offset;
+        ht = HASH_GetHashTypeByOidTag(ot);
+	    ss->ssl3.hs.sha_obj = HASH_GetRawHashObject(ht);
 	    if (!ss->ssl3.hs.sha_obj) {
 		ssl_MapLowLevelError(SSL_ERROR_DIGEST_FAILURE);
 		return SECFailure;
@@ -4601,6 +4614,7 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
 	ss->ssl3.hs.hashType == handshake_hash_single) {
 	/* compute them without PKCS11 */
 	PRUint64      sha_cx[MAX_MAC_CONTEXT_LLONGS];
+    SECOidData *hashOid;
 
 	if (!spec->msItem.data) {
 	    PORT_SetError(SSL_ERROR_RX_UNEXPECTED_HANDSHAKE);
@@ -4611,11 +4625,15 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
 	ss->ssl3.hs.sha_obj->end(sha_cx, hashes->u.raw, &hashes->len,
 				 sizeof(hashes->u.raw));
 
-	PRINT_BUF(60, (NULL, "SHA-256: result", hashes->u.raw, hashes->len));
+	PRINT_BUF(60, (NULL, "Hash: result", hashes->u.raw, hashes->len));
 
-	/* If we ever support ciphersuites where the PRF hash isn't SHA-256
-	 * then this will need to be updated. */
-	hashes->hashAlg = SEC_OID_SHA256;
+    hashOid = SECOID_FindOIDByMechanism(ssl3_GetPrfHashMechanism(ss));
+    if (hashOid == NULL) {
+	    PORT_SetError(SSL_ERROR_DIGEST_FAILURE);
+	    return SECFailure;
+    }
+    hashes->hashAlg = hashOid->offset;
+
 	rv = SECSuccess;
     } else if (ss->opt.bypassPKCS11) {
 	/* compute them without PKCS11 */
@@ -4708,6 +4726,7 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
 	unsigned int  stateLen;
 	unsigned char stackBuf[1024];
 	unsigned char *stateBuf = NULL;
+    SECOidData *hashOid;
 
 	if (!spec->master_secret) {
 	    PORT_SetError(SSL_ERROR_RX_UNEXPECTED_HANDSHAKE);
@@ -4728,9 +4747,15 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
 	    rv = SECFailure;
 	    goto tls12_loser;
 	}
-	/* If we ever support ciphersuites where the PRF hash isn't SHA-256
-	 * then this will need to be updated. */
-	hashes->hashAlg = SEC_OID_SHA256;
+
+    hashOid = SECOID_FindOIDByMechanism(ssl3_GetPrfHashMechanism(ss));
+    if (hashOid == NULL) {
+        ssl_MapLowLevelError(SSL_ERROR_DIGEST_FAILURE);
+        rv = SECFailure;
+        goto tls12_loser;
+    }
+    hashes->hashAlg = hashOid->offset;
+
 	rv = SECSuccess;
 
 tls12_loser:
