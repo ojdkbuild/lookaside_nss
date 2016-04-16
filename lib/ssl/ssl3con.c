@@ -247,14 +247,21 @@ static const /*SSL3ClientCertificateType */ PRUint8 certificate_types [] = {
  * our TLS 1.2 CertificateRequest message, in wire format. See
  * https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
  *
- * This block contains only sha256 entries because we only support TLS 1.2
- * CertificateVerify messages that use the handshake hash. */
-static const PRUint8 supported_signature_algorithms[] = {
+ * We only support TLS 1.2
+ * CertificateVerify messages that use the handshake PRF hash. */
+static const PRUint8 supported_signature_algorithms_sha256[] = {
     tls_hash_sha256, tls_sig_rsa,
 #ifndef NSS_DISABLE_ECC
     tls_hash_sha256, tls_sig_ecdsa,
 #endif
     tls_hash_sha256, tls_sig_dsa,
+};
+static const PRUint8 supported_signature_algorithms_sha384[] = {
+    tls_hash_sha384, tls_sig_rsa,
+#ifndef NSS_DISABLE_ECC
+    tls_hash_sha384, tls_sig_ecdsa,
+#endif
+    tls_hash_sha384, tls_sig_dsa,
 };
 
 #define EXPORT_RSA_KEY_LENGTH 64	/* bytes */
@@ -4023,7 +4030,8 @@ ssl3_InitHandshakeHashes(sslSocket *ss)
 	     * signature.
 	     *
 	     * In TLS 1.2, ssl3_ComputeHandshakeHashes always uses the
-	     * handshake hash function (SHA-256). If the server or the client
+	     * handshake PRF hash function (either SHA-256 or SHA384).
+	     * If the server or the client
 	     * does not support SHA-256 as a signature hash, we can either
 	     * maintain a backup SHA-1 handshake hash or buffer all handshake
 	     * messages.
@@ -4755,6 +4763,14 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
         goto tls12_loser;
     }
     hashes->hashAlg = hashOid->offset;
+    PORT_Assert(hashes->hashAlg == SEC_OID_SHA256 ||
+                hashes->hashAlg == SEC_OID_SHA384);
+    if (hashes->hashAlg != SEC_OID_SHA256 &&
+        hashes->hashAlg != SEC_OID_SHA384) {
+        ssl_MapLowLevelError(SSL_ERROR_DIGEST_FAILURE);
+        rv = SECFailure;
+        goto tls12_loser;
+    }
 
 	rv = SECSuccess;
 
@@ -7020,7 +7036,7 @@ done:
 /* Destroys the backup handshake hash context if we don't need it. Note that
  * this function selects the hash algorithm for client authentication
  * signatures; ssl3_SendCertificateVerify uses the presence of the backup hash
- * to determine whether to use SHA-1 or SHA-256. */
+ * to determine whether to use SHA-1, or the PRF hash of the cipher suite. */
 static void
 ssl3_DestroyBackupHandshakeHashIfNotNeeded(sslSocket *ss,
 					   const SECItem *algorithms)
@@ -7029,9 +7045,12 @@ ssl3_DestroyBackupHandshakeHashIfNotNeeded(sslSocket *ss,
     TLSSignatureAlgorithm sigAlg;
     PRBool preferSha1;
     PRBool supportsSha1 = PR_FALSE;
-    PRBool supportsSha256 = PR_FALSE;
+    PRBool supportsHandshakeHash = PR_FALSE;
     PRBool needBackupHash = PR_FALSE;
     unsigned int i;
+    SECOidData *hashOid;
+    TLSHashAlgoritm suitePRFHash;
+    PRBool suitePRFIs256Or384 = PR_FALSE;
 
 #ifndef NO_PKCS11_BYPASS
     /* Backup handshake hash is not supported in PKCS #11 bypass mode. */
@@ -7048,20 +7067,35 @@ ssl3_DestroyBackupHandshakeHashIfNotNeeded(sslSocket *ss,
 	goto done;
     }
 
+    hashOid = SECOID_FindOIDByMechanism(ssl3_GetPrfHashMechanism(ss));
+    if (hashOid == NULL) {
+        rv = SECFailure;
+	goto done;
+    }
+
+    if (hashOid->offset == SEC_OID_SHA256) {
+	suitePRFHash = tls_hash_sha256;
+	suitePRFIs256Or384 = PR_TRUE;
+    } else if (hashOid->offset == SEC_OID_SHA384) {
+	suitePRFHash = tls_hash_sha384;
+	suitePRFIs256Or384 = PR_TRUE;
+    } 
+
     /* Determine the server's hash support for that signature algorithm. */
     for (i = 0; i < algorithms->len; i += 2) {
 	if (algorithms->data[i+1] == sigAlg) {
 	    if (algorithms->data[i] == tls_hash_sha1) {
 		supportsSha1 = PR_TRUE;
-	    } else if (algorithms->data[i] == tls_hash_sha256) {
-		supportsSha256 = PR_TRUE;
+	    } else if (suitePRFIs256Or384 &&
+	               algorithms->data[i] == suitePRFHash) {
+		supportsHandshakeHash = PR_TRUE;
 	    }
 	}
     }
 
-    /* If either the server does not support SHA-256 or the client key prefers
-     * SHA-1, leave the backup hash. */
-    if (supportsSha1 && (preferSha1 || !supportsSha256)) {
+    /* If either the server does not support SHA-256/384, or the client key
+     * prefers SHA-1, leave the backup hash. */
+    if (supportsSha1 && (preferSha1 || !supportsHandshakeHash)) {
 	needBackupHash = PR_TRUE;
     }
 
@@ -9231,6 +9265,7 @@ ssl3_SendCertificateRequest(sslSocket *ss)
     int            nnames	= 0;
     int            certTypesLength;
     int            sigAlgsLength;
+    SECOidData     *hashOid;
 
     SSL_TRC(3, ("%d: SSL3[%d]: send certificate_request handshake",
 		SSL_GETPID(), ss->fd));
@@ -9257,8 +9292,20 @@ ssl3_SendCertificateRequest(sslSocket *ss)
 
     certTypes       = certificate_types;
     certTypesLength = sizeof certificate_types;
-    sigAlgs         = supported_signature_algorithms;
-    sigAlgsLength   = sizeof supported_signature_algorithms;
+
+    hashOid = SECOID_FindOIDByMechanism(ssl3_GetPrfHashMechanism(ss));
+    if (hashOid == NULL) {
+	return SECFailure; 		/* err set by AppendHandshake. */
+    }
+    if (hashOid->offset == SEC_OID_SHA256) {
+	sigAlgs         = supported_signature_algorithms_sha256;
+	sigAlgsLength   = sizeof supported_signature_algorithms_sha256;
+    } else if (hashOid->offset == SEC_OID_SHA384) {
+	sigAlgs         = supported_signature_algorithms_sha384;
+	sigAlgsLength   = sizeof supported_signature_algorithms_sha384;
+    } else {
+	return SECFailure; 		/* err set by AppendHandshake. */
+    }
 
     length = 1 + certTypesLength + 2 + calen;
     if (isTLS12) {

@@ -122,7 +122,7 @@ static SSL3Statistics * ssl3stats;
 
 static int failed_already = 0;
 static SSLVersionRange enabledVersions;
-static PRBool enableSSL2      = PR_TRUE;
+static PRBool enableSSL2      = PR_FALSE;
 static PRBool bypassPKCS11    = PR_FALSE;
 static PRBool disableLocking  = PR_FALSE;
 static PRBool ignoreErrors    = PR_FALSE;
@@ -163,7 +163,7 @@ Usage(const char *progName)
 	"       -P means do a specified percentage of full handshakes (0-100)\n"
         "       -V [min]:[max] restricts the set of enabled SSL/TLS protocols versions.\n"
         "          All versions are enabled by default.\n"
-        "          Possible values for min/max: ssl2 ssl3 tls1.0 tls1.1 tls1.2\n"
+        "          Possible values for min/max: ssl3 tls1.0 tls1.1 tls1.2\n"
         "          Example: \"-V ssl3:\" enables SSL 3 and newer.\n"
         "       -U means enable throttling up threads\n"
 	"       -B bypasses the PKCS11 layer for SSL encryption and MACing\n"

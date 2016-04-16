@@ -221,14 +221,14 @@ typedef struct {
  * https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
  *
  * When updating, be sure to also update ssl3_TLSHashAlgorithmToOID. */
-enum {
+typedef enum {
     tls_hash_md5 = 1,
     tls_hash_sha1 = 2,
     tls_hash_sha224 = 3,
     tls_hash_sha256 = 4,
     tls_hash_sha384 = 5,
     tls_hash_sha512 = 6
-};
+} TLSHashAlgoritm;
 
 /* This enum reflects SignatureAlgorithm enum from
  * https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1 */
