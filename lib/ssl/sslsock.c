@@ -655,6 +655,12 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
         break;
 
       case SSL_ENABLE_SSL2:
+#ifdef NSS_NO_SSL2
+        if (on) {
+            PORT_SetError(SSL_ERROR_SSL2_DISABLED);
+            rv = SECFailure; /* not allowed */
+        }
+#else
         if (IS_DTLS(ss)) {
             if (on) {
                 PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -672,6 +678,7 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
             ss->cipherSpecs     = NULL;
             ss->sizeCipherSpecs = 0;
         }
+#endif /* NSS_NO_SSL2 */
         break;
 
       case SSL_NO_CACHE:
@@ -687,6 +694,12 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
         break;
 
       case SSL_V2_COMPATIBLE_HELLO:
+#ifdef NSS_NO_SSL2
+        if (on) {
+            PORT_SetError(SSL_ERROR_SSL2_DISABLED);
+            rv = SECFailure; /* not allowed */
+        }
+#else
         if (IS_DTLS(ss)) {
             if (on) {
                 PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -698,6 +711,7 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
         if (!on) {
             ss->opt.enableSSL2    = on;
         }
+#endif /* NSS_NO_SSL2 */
         break;
 
       case SSL_ROLLBACK_DETECTION:
@@ -705,9 +719,16 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
         break;
 
       case SSL_NO_STEP_DOWN:
+#ifdef NSS_NO_SSL2
+        if (!on) {
+            PORT_SetError(SSL_ERROR_SSL2_DISABLED);
+            rv = SECFailure; /* not allowed */
+        }
+#else
         ss->opt.noStepDown     = on;
         if (on)
             SSL_DisableExportCipherSuites(fd);
+#endif /* NSS_NO_SSL2 */
         break;
 
       case SSL_BYPASS_PKCS11:
@@ -1132,6 +1153,13 @@ SSL_OptionSetDefault(PRInt32 which, PRBool on)
 static PRBool
 ssl_IsRemovedCipherSuite(PRInt32 suite)
 {
+#ifdef NSS_NO_SSL2
+    /* both ssl2 and export cipher suites disabled */
+    if (SSL_IS_SSL2_CIPHER(suite))
+        return PR_TRUE;
+    if (SSL_IsExportCipherSuite(suite))
+      return PR_TRUE;
+#endif /* NSS_NO_SSL2_NO_EXPORT */
     switch (suite) {
     case SSL_FORTEZZA_DMS_WITH_NULL_SHA:
     case SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA:
