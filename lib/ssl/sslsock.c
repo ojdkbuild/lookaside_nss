@@ -85,6 +85,7 @@ static sslOptions ssl_defaults = {
     PR_TRUE,    /* reuseServerECDHEKey */
     PR_FALSE,   /* enableFallbackSCSV */
     PR_TRUE,    /* enableServerDhe */
+/* Keep extended-master-secret disabled until we have a compatible softokn. */
     PR_FALSE    /* enableExtendedMS    */
 };
 
@@ -848,7 +849,10 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
         break;
 
       case SSL_ENABLE_EXTENDED_MASTER_SECRET:
+#if 0
+/* No-Op until we have a compatible softokn. */
         ss->opt.enableExtendedMS = on;
+#endif
         break;
 
       default:
@@ -1192,7 +1196,10 @@ SSL_OptionSetDefault(PRInt32 which, PRBool on)
         break;
 
       case SSL_ENABLE_EXTENDED_MASTER_SECRET:
+#if 0
+/* No-Op until we have a compatible softokn. */
         ssl_defaults.enableExtendedMS = on;
+#endif
         break;
 
       default:
