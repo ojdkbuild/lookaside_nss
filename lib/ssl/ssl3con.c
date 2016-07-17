@@ -4474,8 +4474,8 @@ ssl3_AppendSignatureAndHashAlgorithm(
     sslSocket *ss, const SSLSignatureAndHashAlg* sigAndHash)
 {
     PRUint8 serialized[2];
-    unsigned char hashAlg = ssl3_OIDToTLSHashAlgorithm(sigAndHash->hashAlg);
-    if (hashAlg == 0) {
+    SECOidTag hashAlg = ssl3_TLSHashAlgorithmToOID(sigAndHash->hashAlg);
+    if (hashAlg == SEC_OID_UNKNOWN) {
 	PORT_SetError(SSL_ERROR_UNSUPPORTED_HASH_ALGORITHM);
 	return SECFailure;
     }
