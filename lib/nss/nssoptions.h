@@ -16,6 +16,6 @@
 /* 1023 to avoid cases where p = 2q+1 for a 512-bit q turns out to be
  * only 1023 bits and similar.  We don't have good data on whether this
  * happens because NSS used to count bit lengths incorrectly. */
-#define SSL_DH_MIN_P_BITS 1023
+#define SSL_DH_MIN_P_BITS 768
 #define SSL_DSA_MIN_P_BITS 1023
 
