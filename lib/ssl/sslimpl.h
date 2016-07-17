@@ -64,6 +64,7 @@ typedef SSLSignType     SSL3SignType;
 #define hmac_md5	ssl_hmac_md5
 #define hmac_sha	ssl_hmac_sha
 #define hmac_sha256	ssl_hmac_sha256
+#define hmac_sha384	ssl_hmac_sha384
 #define mac_aead	ssl_mac_aead
 
 #define SET_ERROR_CODE		/* reminder */
@@ -300,9 +301,9 @@ typedef struct {
 } ssl3CipherSuiteCfg;
 
 #ifndef NSS_DISABLE_ECC
-#define ssl_V3_SUITES_IMPLEMENTED 64
+#define ssl_V3_SUITES_IMPLEMENTED 71
 #else
-#define ssl_V3_SUITES_IMPLEMENTED 40
+#define ssl_V3_SUITES_IMPLEMENTED 43
 #endif /* NSS_DISABLE_ECC */
 
 #define MAX_DTLS_SRTP_CIPHER_SUITES 4
@@ -486,9 +487,17 @@ typedef enum {
     cipher_camellia_256,
     cipher_seed,
     cipher_aes_128_gcm,
+    cipher_aes_256_gcm,
     cipher_missing              /* reserved for no such supported cipher */
     /* This enum must match ssl3_cipherName[] in ssl3con.c.  */
 } SSL3BulkCipher;
+
+/* The TLS PRF definition */
+typedef enum {
+    prf_null = 0, /* use default prf */
+    prf_256 = CKM_SHA256,
+    prf_384 = CKM_SHA384
+} SSL3PRF;
 
 typedef enum { type_stream, type_block, type_aead } CipherType;
 
@@ -736,6 +745,7 @@ typedef struct ssl3CipherSuiteDefStr {
     SSL3BulkCipher           bulk_cipher_alg;
     SSL3MACAlgorithm         mac_alg;
     SSL3KeyExchangeAlgorithm key_exchange_alg;
+    SSL3PRF                  prf_alg;
 } ssl3CipherSuiteDef;
 
 /*

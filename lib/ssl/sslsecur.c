@@ -808,6 +808,11 @@ ssl_ConfigSecureServer(sslSocket *ss, CERTCertificate *cert,
             goto loser;
         }
      }
+    if (kea == ssl_kea_dh || kea == ssl_kea_rsa) {
+        if (ssl3_SelectDHParams(ss) != SECSuccess) {
+            goto loser;
+        }
+     }
     return SECSuccess;
 
 loser:
