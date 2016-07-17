@@ -204,6 +204,7 @@ static const SSLSignatureAndHashAlg defaultSignatureAlgorithms[] = {
     {ssl_hash_sha512, ssl_sign_ecdsa},
     {ssl_hash_sha1, ssl_sign_ecdsa},
 #endif
+    {ssl_hash_sha384, ssl_sign_dsa},
     {ssl_hash_sha256, ssl_sign_dsa},
     {ssl_hash_sha1, ssl_sign_dsa}
 };
@@ -268,27 +269,6 @@ static const /*SSL3ClientCertificateType */ PRUint8 certificate_types [] = {
     ct_ECDSA_sign,
 #endif /* NSS_DISABLE_ECC */
     ct_DSS_sign,
-};
-
-/* This block is the contents of the supported_signature_algorithms field of
- * our TLS 1.2 CertificateRequest message, in wire format. See
- * https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
- *
- * We only support TLS 1.2
- * CertificateVerify messages that use the handshake PRF hash. */
-static const PRUint8 supported_signature_algorithms_sha256[] = {
-    tls_hash_sha256, tls_sig_rsa,
-#ifndef NSS_DISABLE_ECC
-    tls_hash_sha256, tls_sig_ecdsa,
-#endif
-    tls_hash_sha256, tls_sig_dsa,
-};
-static const PRUint8 supported_signature_algorithms_sha384[] = {
-    tls_hash_sha384, tls_sig_rsa,
-#ifndef NSS_DISABLE_ECC
-    tls_hash_sha384, tls_sig_ecdsa,
-#endif
-    tls_hash_sha384, tls_sig_dsa,
 };
 
 #define EXPORT_RSA_KEY_LENGTH 64	/* bytes */
@@ -9561,7 +9541,8 @@ loser:
 }
 
 static SECStatus
-ssl3_EncodeCertificateRequestSigAlgs(sslSocket *ss, PRUint8 *buf,
+ssl3_EncodeCertificateRequestSigAlgs(sslSocket *ss, PRUint8 allowedHashAlg,
+                                     PRUint8 *buf,
                                      unsigned maxLen, PRUint32 *len)
 {
     unsigned int i;
@@ -9578,7 +9559,7 @@ ssl3_EncodeCertificateRequestSigAlgs(sslSocket *ss, PRUint8 *buf,
         /* Note that we don't support a handshake hash with anything other than
          * SHA-256, so asking for a signature from clients for something else
          * would be inviting disaster. */
-        if (alg->hashAlg == ssl_hash_sha256 || alg->hashAlg == ssl_hash_sha384) {
+        if (alg->hashAlg == allowedHashAlg) {
             buf[(*len)++] = (PRUint8)alg->hashAlg;
             buf[(*len)++] = (PRUint8)alg->sigAlg;
         }
@@ -9608,6 +9589,7 @@ ssl3_SendCertificateRequest(sslSocket *ss)
     PRUint8        sigAlgs[MAX_SIGNATURE_ALGORITHMS * 2];
     unsigned int   sigAlgsLength = 0;
     SECOidData *hashOid;
+    PRUint8        allowedHashAlg;
 
     SSL_TRC(3, ("%d: SSL3[%d]: send certificate_request handshake",
 		SSL_GETPID(), ss->fd));
@@ -9639,19 +9621,19 @@ ssl3_SendCertificateRequest(sslSocket *ss)
     if (hashOid == NULL) {
 	return SECFailure; 		/* err set by AppendHandshake. */
     }
+
     if (hashOid->offset == SEC_OID_SHA256) {
-	sigAlgsLength = sizeof supported_signature_algorithms_sha256;
-    PORT_Memcpy(sigAlgs, supported_signature_algorithms_sha256, sigAlgsLength);
+        allowedHashAlg = ssl_hash_sha256;
     } else if (hashOid->offset == SEC_OID_SHA384) {
-	sigAlgsLength = sizeof supported_signature_algorithms_sha384;
-    PORT_Memcpy(sigAlgs, supported_signature_algorithms_sha384, sigAlgsLength);
+        allowedHashAlg = ssl_hash_sha384;
     } else {
 	return SECFailure; 		/* err set by AppendHandshake. */
     }
 
     length = 1 + certTypesLength + 2 + calen;
     if (isTLS12) {
-        rv = ssl3_EncodeCertificateRequestSigAlgs(ss, sigAlgs, sizeof(sigAlgs),
+        rv = ssl3_EncodeCertificateRequestSigAlgs(ss, allowedHashAlg,
+                                                  sigAlgs, sizeof(sigAlgs),
                                                   &sigAlgsLength);
         if (rv != SECSuccess) {
             return rv;
