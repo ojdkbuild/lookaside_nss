@@ -6626,12 +6626,14 @@ ssl3_HandleServerHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     ss->ssl3.hs.preliminaryInfo |= ssl_preinfo_version;
     isTLS = (ss->version > SSL_LIBRARY_VERSION_3_0);
 
+#ifdef notdef
     rv = ssl3_InitHandshakeHashes(ss);
     if (rv != SECSuccess) {
 	desc = internal_error;
 	errCode = PORT_GetError();
 	goto alert_loser;
     }
+#endif
 
     rv = ssl3_ConsumeHandshake(
 	ss, &ss->ssl3.hs.server_random, SSL3_RANDOM_LENGTH, &b, &length);
@@ -8115,12 +8117,14 @@ ssl3_HandleClientHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     }
     ss->ssl3.hs.preliminaryInfo |= ssl_preinfo_version;
 
+#ifdef notdef
     rv = ssl3_InitHandshakeHashes(ss);
     if (rv != SECSuccess) {
 	desc = internal_error;
 	errCode = PORT_GetError();
 	goto alert_loser;
     }
+#endif
 
     /* grab the client random data. */
     rv = ssl3_ConsumeHandshake(
@@ -8941,12 +8945,14 @@ ssl3_HandleV2ClientHello(sslSocket *ss, unsigned char *buffer, int length)
     }
     ss->ssl3.hs.preliminaryInfo |= ssl_preinfo_version;
 
+#ifdef notdef
     rv = ssl3_InitHandshakeHashes(ss);
     if (rv != SECSuccess) {
 	desc = internal_error;
 	errCode = PORT_GetError();
 	goto alert_loser;
     }
+#endif
 
     /* if we get a non-zero SID, just ignore it. */
     if (length !=
