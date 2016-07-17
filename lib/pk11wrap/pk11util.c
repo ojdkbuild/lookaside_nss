@@ -1282,7 +1282,7 @@ SECMOD_HasRemovableSlots(SECMODModule *mod)
  */
 static SECStatus
 secmod_UserDBOp(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass, 
-		const char *sendSpec)
+		const char *sendSpec, PRBool needlock)
 {
     CK_OBJECT_HANDLE dummy;
     CK_ATTRIBUTE template[2] ;
@@ -1296,16 +1296,16 @@ secmod_UserDBOp(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass,
     PORT_Assert(attrs-template <= 2);
 
 
-    PK11_EnterSlotMonitor(slot);
+    if (needlock) PK11_EnterSlotMonitor(slot);
     crv = PK11_CreateNewObject(slot, slot->session,
 	template, attrs-template, PR_FALSE, &dummy);
-    PK11_ExitSlotMonitor(slot);
+    if (needlock) PK11_ExitSlotMonitor(slot);
 
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
 	return SECFailure;
     }
-    return SECMOD_UpdateSlotList(slot->module);
+    return SECSuccess;
 }
 
 /*
@@ -1314,11 +1314,20 @@ secmod_UserDBOp(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass,
 static PRBool
 secmod_SlotIsEmpty(SECMODModule *mod,  CK_SLOT_ID slotID)
 {
-    PK11SlotInfo *slot = SECMOD_LookupSlot(mod->moduleID, slotID);
+    PK11SlotInfo *slot = SECMOD_FindSlotByID(mod, slotID);
     if (slot) {
-	PRBool present = PK11_IsPresent(slot);
+	CK_SLOT_INFO slotInfo;
+	CK_RV crv;
+	/* check if the slot is present, skip any slot reinit stuff,
+	 * or cached present values, or locking. (we don't need to lock 
+	 * even if the module is not thread safe because we are already 
+	 * holding the module refLock, which is the same as the slot 
+	 * sessionLock if the module isn't thread safe. */
+	crv = PK11_GETTAB(slot)->C_GetSlotInfo(slot->slotID,&slotInfo);
 	PK11_FreeSlot(slot);
-	if (present) {
+	if ((crv == CKR_OK) && 
+		((slotInfo.flags & CKF_TOKEN_PRESENT) == CKF_TOKEN_PRESENT)) {
+	    /* slot is present, so it's not empty */
 	    return PR_FALSE;
 	}
     }
@@ -1374,24 +1383,29 @@ SECMOD_OpenNewSlot(SECMODModule *mod, const char *moduleSpec)
     char *sendSpec;
     SECStatus rv;
 
+    PZ_Lock(mod->refLock);   /* don't reuse a slot on the fly */
     slotID = secmod_FindFreeSlot(mod);
     if (slotID == (CK_SLOT_ID) -1) {
+	PZ_Unlock(mod->refLock);
 	return NULL;
     }
 
     if (mod->slotCount == 0) {
+	PZ_Unlock(mod->refLock);
 	return NULL;
     }
 
     /* just grab the first slot in the module, any present slot should work */
     slot = PK11_ReferenceSlot(mod->slots[0]);
     if (slot == NULL) {
+	PZ_Unlock(mod->refLock);
 	return NULL;
     }
 
     /* we've found the slot, now build the moduleSpec */
     escSpec = NSSUTIL_DoubleEscape(moduleSpec, '>', ']');
     if (escSpec == NULL) {
+	PZ_Unlock(mod->refLock);
 	PK11_FreeSlot(slot);
 	return NULL;
     }
@@ -1400,13 +1414,23 @@ SECMOD_OpenNewSlot(SECMODModule *mod, const char *moduleSpec)
 
     if (sendSpec == NULL) {
 	/* PR_smprintf does not set SEC_ERROR_NO_MEMORY on failure. */
+	PZ_Unlock(mod->refLock);
 	PK11_FreeSlot(slot);
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	return NULL;
     }
-    rv = secmod_UserDBOp(slot, CKO_NETSCAPE_NEWSLOT, sendSpec);
+    rv = secmod_UserDBOp(slot, CKO_NETSCAPE_NEWSLOT, sendSpec, 
+    /* If the module isn't thread safe, the slot sessionLock == mod->refLock
+     * since we already hold the refLock we don't need to lock the sessionLock
+     */
+							mod->isThreadSafe);
+    PZ_Unlock(mod->refLock);
     PR_smprintf_free(sendSpec);
     PK11_FreeSlot(slot);
+    if (rv != SECSuccess) {
+	return NULL;
+    }
+    rv = SECMOD_UpdateSlotList(mod); /* don't call holding the mod->reflock */
     if (rv != SECSuccess) {
 	return NULL;
     }
@@ -1512,7 +1536,7 @@ SECMOD_CloseUserDB(PK11SlotInfo *slot)
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	return SECFailure;
     }
-    rv = secmod_UserDBOp(slot, CKO_NETSCAPE_DELSLOT, sendSpec);
+    rv = secmod_UserDBOp(slot, CKO_NETSCAPE_DELSLOT, sendSpec, PR_TRUE);
     PR_smprintf_free(sendSpec);
     /* if we are in the delay period for the "isPresent" call, reset
      * the delay since we know things have probably changed... */
