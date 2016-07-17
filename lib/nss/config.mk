@@ -3,6 +3,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifeq ($(NSS_BUILD_WITHOUT_SOFTOKEN),1)
+INCLUDES += -I/usr/include/nss3/templates
+#endif
+
 # can't do this in manifest.mn because OS_TARGET isn't defined there.
 ifeq (,$(filter-out WIN%,$(OS_TARGET)))
 
