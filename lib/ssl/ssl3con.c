@@ -4950,7 +4950,7 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
         rv = SECFailure;
         goto tls12_loser;
     }
-    hashes->hashAlg = hashOid->offset;
+    hashes->hashAlg = ssl3_OIDToTLSHashAlgorithm(hashOid->offset);
     PORT_Assert(hashes->hashAlg == ssl_hash_sha256 ||
                 hashes->hashAlg == ssl_hash_sha384);
     if (hashes->hashAlg != ssl_hash_sha256 &&
@@ -9581,7 +9581,7 @@ ssl3_EncodeCertificateRequestSigAlgs(sslSocket *ss, PRUint8 *buf,
         /* Note that we don't support a handshake hash with anything other than
          * SHA-256, so asking for a signature from clients for something else
          * would be inviting disaster. */
-        if (alg->hashAlg == ssl_hash_sha256 /* || alg->hashAlg == ssl_hash_sha384*/) {
+        if (alg->hashAlg == ssl_hash_sha256 || alg->hashAlg == ssl_hash_sha384) {
             buf[(*len)++] = (PRUint8)alg->hashAlg;
             buf[(*len)++] = (PRUint8)alg->sigAlg;
         }
