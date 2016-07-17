@@ -62,9 +62,14 @@ ssl_init()
   NSS_SSL_RUN=${NSS_SSL_RUN:-$nss_ssl_run}
 
   # Test case files
-  SSLCOV=${QADIR}/ssl/sslcov.txt
+  if [ "${NSS_NO_SSL2}" = "1" ]; then
+    SSLCOV=${QADIR}/ssl/sslcov.noSSL2orExport.txt
+    SSLSTRESS=${QADIR}/ssl/sslstress.noSSL2orExport.txt
+  else
+    SSLCOV=${QADIR}/ssl/sslcov.txt
+    SSLSTRESS=${QADIR}/ssl/sslstress.txt
+  fi
   SSLAUTH=${QADIR}/ssl/sslauth.txt
-  SSLSTRESS=${QADIR}/ssl/sslstress.txt
   REQUEST_FILE=${QADIR}/ssl/sslreq.dat
 
   #temparary files
@@ -120,7 +125,11 @@ is_selfserv_alive()
   fi
 
   echo "kill -0 ${PID} >/dev/null 2>/dev/null" 
+  if [ "${NSS_NO_SSL2}" = "1" ] && [[ ${EXP} -eq 0 || ${SSL2} -eq 0 ]]; then
+  echo "No server to kill"
+  else
   kill -0 ${PID} >/dev/null 2>/dev/null || Exit 10 "Fatal - selfserv process not detectable"
+  fi
 
   echo "selfserv with PID ${PID} found at `date`"
 }
@@ -143,7 +152,11 @@ wait_for_selfserv()
       ${BINDIR}/tstclnt -p ${PORT} -h ${HOSTADDR} ${CLIENT_OPTIONS} -q \
               -d ${P_R_CLIENTDIR} -v < ${REQUEST_FILE}
       if [ $? -ne 0 ]; then
+          if [ "${NSS_NO_SSL2}" = "1" ] && [[ ${EXP} -eq 0 || ${SSL2} -eq 0 ]]; then
+              html_passed "Server never started"
+          else
           html_failed "Waiting for Server"
+          fi
       fi
   fi
   is_selfserv_alive
@@ -214,15 +227,16 @@ start_selfserv()
   echo "selfserv starting at `date`"
   echo "selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \\"
   echo "         ${ECC_OPTIONS} -S ${HOSTADDR}-dsa -w nss ${sparam} -i ${R_SERVERPID}\\"
-  echo "         $verbose -H 1 &"
+  echo "         $verbose -H 1 -V ssl3: &"
   if [ ${fileout} -eq 1 ]; then
       ${PROFTOOL} ${BINDIR}/selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \
                ${ECC_OPTIONS} -S ${HOSTADDR}-dsa -w nss ${sparam} -i ${R_SERVERPID} $verbose -H 1 \
-               > ${SERVEROUTFILE} 2>&1 &
+               -V ssl3:> ${SERVEROUTFILE} 2>&1 &
       RET=$?
   else
       ${PROFTOOL} ${BINDIR}/selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \
-               ${ECC_OPTIONS} -S ${HOSTADDR}-dsa -w nss ${sparam} -i ${R_SERVERPID} $verbose -H 1 &
+               ${ECC_OPTIONS} -S ${HOSTADDR}-dsa -w nss ${sparam} -i ${R_SERVERPID} $verbose -H 1 \
+               -V ssl3: &
       RET=$?
   fi
 
@@ -269,7 +283,7 @@ ssl_cov()
   start_selfserv # Launch the server
 
   VMIN="ssl2"
-  VMAX="tls1.1"
+  VMAX="tls1.2"
                
   exec < ${SSLCOV}
   while read ectype testmax param testname
@@ -278,6 +292,12 @@ ssl_cov()
       EXP=$?
       echo "${testname}" | grep "SSL2" > /dev/null
       SSL2=$?
+
+      #  skip export and ssl2 tests when build has disabled SSL2
+      if [ "${NSS_NO_SSL2}" = "1" ] && [[ ${EXP} -eq 0 || ${SSL2} -eq 0 ]]; then
+         echo "exp/ssl2 test skipped: (NSS_NO_SSL2,EXP,SSL2)=(${NSS_NO_SSL2},${EXP},${SSL2})"
+         continue
+      fi
 
       if [ "${SSL2}" -eq 0 ] ; then
           # We cannot use asynchronous cert verification with SSL2
