@@ -111,7 +111,8 @@ run_tests()
 {
     for TEST in ${TESTS}
     do
-        echo "${TESTS_SKIP}" | grep "${TEST}" > /dev/null
+        echo "Checking if ${TEST} should be skipped based on skip list [${TESTS_SKIP}]"
+        echo "${TESTS_SKIP}" | grep -w "${TEST}" > /dev/null
         if [ $? -eq 0 ]; then
             continue
         fi
