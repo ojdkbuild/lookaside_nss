@@ -49,6 +49,7 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # (6) Execute "component" rules. (OPTIONAL)                           #
 #######################################################################
 
+INCLUDES += -iquote $(DIST)/../public/nss
 
 
 #######################################################################
