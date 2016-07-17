@@ -1579,6 +1579,11 @@ SECMOD_RestartModules(PRBool force)
              * older modules require it, and it doesn't hurt (compliant modules
              * will return CKR_NOT_INITIALIZED */
 	    (void) PK11_GETTAB(mod)->C_Finalize(NULL);
+	    /* finalize clears the session, mark them dead in the 
+	     * slot as well */
+	    for (i=0; i < mod->slotCount; i++) {
+		mod->slots[i]->session = CK_INVALID_SESSION;
+	    }
 	    /* now initialize the module, this function reinitializes
 	     * a module in place, preserving existing slots (even if they
 	     * no longer exist) */
@@ -1598,17 +1603,18 @@ SECMOD_RestartModules(PRBool force)
 		/* get new token sessions, bump the series up so that
 		 * we refresh other old sessions. This will tell much of
 		 * NSS to flush cached handles it may hold as well */
-		rv = PK11_InitToken(mod->slots[i],PR_TRUE);
+		PK11SlotInfo *slot = mod->slots[i];
+		rv = PK11_InitToken(slot,PR_TRUE);
 		/* PK11_InitToken could fail if the slot isn't present.
 		 * If it is present, though, something is wrong and we should
 		 * disable the slot and let the caller know. */
-		if (rv != SECSuccess && PK11_IsPresent(mod->slots[i])) {
+		if (rv != SECSuccess && PK11_IsPresent(slot)) {
 		    /* save the last error code */
 		    lastError = PORT_GetError();
 		    rrv = rv;
 		    /* disable the token */
-		    mod->slots[i]->disabled = PR_TRUE;
-		    mod->slots[i]->reason = PK11_DIS_COULD_NOT_INIT_TOKEN;
+		    slot->disabled = PR_TRUE;
+		    slot->reason = PK11_DIS_COULD_NOT_INIT_TOKEN;
 		}
 	    }
 	}

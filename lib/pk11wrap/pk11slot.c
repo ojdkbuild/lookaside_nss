@@ -1053,6 +1053,7 @@ PK11_ReadMechanismList(PK11SlotInfo *slot)
     CK_ULONG count;
     CK_RV crv;
     PRUint32 i;
+    char mechanismBits[sizeof(slot->mechanismBits)];
 
     if (slot->mechanismList) {
 	PORT_Free(slot->mechanismList);
@@ -1060,10 +1061,8 @@ PK11_ReadMechanismList(PK11SlotInfo *slot)
     }
     slot->mechanismCount = 0;
 
-    if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_GetMechanismList(slot->slotID,NULL,&count);
     if (crv != CKR_OK) {
-	if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
 	PORT_SetError(PK11_MapError(crv));
 	return SECFailure;
     }
@@ -1071,12 +1070,10 @@ PK11_ReadMechanismList(PK11SlotInfo *slot)
     slot->mechanismList = (CK_MECHANISM_TYPE *)
 			    PORT_Alloc(count *sizeof(CK_MECHANISM_TYPE));
     if (slot->mechanismList == NULL) {
-	if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
 	return SECFailure;
     }
     crv = PK11_GETTAB(slot)->C_GetMechanismList(slot->slotID,
 						slot->mechanismList, &count);
-    if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
     if (crv != CKR_OK) {
 	PORT_Free(slot->mechanismList);
 	slot->mechanismList = NULL;
@@ -1084,14 +1081,16 @@ PK11_ReadMechanismList(PK11SlotInfo *slot)
 	return SECSuccess;
     }
     slot->mechanismCount = count;
-    PORT_Memset(slot->mechanismBits, 0, sizeof(slot->mechanismBits));
+    PORT_Memset(mechanismBits, 0, sizeof(slot->mechanismBits));
 
     for (i=0; i < count; i++) {
 	CK_MECHANISM_TYPE mech = slot->mechanismList[i];
 	if (mech < 0x7ff) {
-	    slot->mechanismBits[mech & 0xff] |= 1 << (mech >> 8);
+	    mechanismBits[mech & 0xff] |= 1 << (mech >> 8);
 	}
     }
+    PORT_Memcpy(slot->mechanismBits, mechanismBits, 
+					sizeof(slot->mechanismBits));
     return SECSuccess;
 }
 
@@ -1108,12 +1107,20 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
     CK_RV crv;
     SECStatus rv;
     PRStatus status;
+    CK_SESSION_HANDLE session;
+ 
+    PK11_EnterSlotMonitor(slot);
+    if (slot->session != CK_INVALID_SESSION) {
+	/* The reason for doing an InitToken has already been satisfied by
+         * another thread. Just return */
+	PK11_ExitSlotMonitor(slot);
+	return SECSuccess;
+    }
 
     /* set the slot flags to the current token values */
-    if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_GetTokenInfo(slot->slotID,&tokenInfo);
-    if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
     if (crv != CKR_OK) {
+	PK11_ExitSlotMonitor(slot);
 	PORT_SetError(PK11_MapError(crv));
 	return SECFailure;
     }
@@ -1150,7 +1157,10 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
     slot->defRWSession = (PRBool)((!slot->readOnly) && 
 					(tokenInfo.ulMaxSessionCount == 1));
     rv = PK11_ReadMechanismList(slot);
-    if (rv != SECSuccess) return rv;
+    if (rv != SECSuccess)  {
+	PK11_ExitSlotMonitor(slot);
+ 	return rv;
+    }
 
     slot->hasRSAInfo = PR_FALSE;
     slot->RSAInfoFlags = 0;
@@ -1165,50 +1175,23 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 	slot->maxKeyCount = tokenInfo.ulMaxSessionCount/2;
     }
 
-    /* Make sure our session handle is valid */
-    if (slot->session == CK_INVALID_SESSION) {
-	/* we know we don't have a valid session, go get one */
-	CK_SESSION_HANDLE session;
-
-	/* session should be Readonly, serial */
-	if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
-	crv = PK11_GETTAB(slot)->C_OpenSession(slot->slotID,
+    /* we know we don't have a valid session, go get one */
+    /* session should be Readonly, serial */
+    crv = PK11_GETTAB(slot)->C_OpenSession(slot->slotID,
 	      (slot->defRWSession ? CKF_RW_SESSION : 0) | CKF_SERIAL_SESSION,
 				  slot,pk11_notify,&session);
-	if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
-	if (crv != CKR_OK) {
-	    PORT_SetError(PK11_MapError(crv));
-	    return SECFailure;
-	}
-	slot->session = session;
-    } else {
-	/* The session we have may be defunct (the token associated with it)
-	 * has been removed   */
-	CK_SESSION_INFO sessionInfo;
-
-	if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
-	crv = PK11_GETTAB(slot)->C_GetSessionInfo(slot->session,&sessionInfo);
-        if (crv == CKR_DEVICE_ERROR) {
-	    PK11_GETTAB(slot)->C_CloseSession(slot->session);
-	    crv = CKR_SESSION_CLOSED;
-	}
-	if ((crv==CKR_SESSION_CLOSED) || (crv==CKR_SESSION_HANDLE_INVALID)) {
-	    crv =PK11_GETTAB(slot)->C_OpenSession(slot->slotID,
-	      (slot->defRWSession ? CKF_RW_SESSION : 0) | CKF_SERIAL_SESSION,
-					slot,pk11_notify,&slot->session);
-	    if (crv != CKR_OK) {
-	        PORT_SetError(PK11_MapError(crv));
-		slot->session = CK_INVALID_SESSION;
-		if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
-		return SECFailure;
-	    }
-	}
-	if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
+    if (crv != CKR_OK) {
+	PK11_ExitSlotMonitor(slot);
+	PORT_SetError(PK11_MapError(crv));
+	return SECFailure;
     }
+    slot->session = session;
 
     status = nssToken_Refresh(slot->nssToken);
-    if (status != PR_SUCCESS)
+    if (status != PR_SUCCESS) {
+	PK11_ExitSlotMonitor(slot);
     	return SECFailure;
+     }
 
     if (!(slot->isInternal) && (slot->hasRandom)) {
 	/* if this slot has a random number generater, use it to add entropy
@@ -1221,28 +1204,20 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 	    /* if this slot can issue random numbers, get some entropy from
 	     * that random number generater and give it to our internal token.
 	     */
-	    PK11_EnterSlotMonitor(slot);
 	    crv = PK11_GETTAB(slot)->C_GenerateRandom
 			(slot->session,random_bytes, sizeof(random_bytes));
-	    PK11_ExitSlotMonitor(slot);
 	    if (crv == CKR_OK) {
-	        PK11_EnterSlotMonitor(int_slot);
 		PK11_GETTAB(int_slot)->C_SeedRandom(int_slot->session,
 					random_bytes, sizeof(random_bytes));
-	        PK11_ExitSlotMonitor(int_slot);
 	    }
 
 	    /* Now return the favor and send entropy to the token's random 
 	     * number generater */
-	    PK11_EnterSlotMonitor(int_slot);
 	    crv = PK11_GETTAB(int_slot)->C_GenerateRandom(int_slot->session,
 					random_bytes, sizeof(random_bytes));
-	    PK11_ExitSlotMonitor(int_slot);
 	    if (crv == CKR_OK) {
-	        PK11_EnterSlotMonitor(slot);
 		crv = PK11_GETTAB(slot)->C_SeedRandom(slot->session,
 					random_bytes, sizeof(random_bytes));
-	        PK11_ExitSlotMonitor(slot);
 	    }
 	    PK11_FreeSlot(int_slot);
 	}
@@ -1274,6 +1249,7 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 	    PK11_GETTAB(slot)->C_CloseSession(session);
 	}
     }
+    PK11_ExitSlotMonitor(slot);
 	
     return SECSuccess;
 }
@@ -1387,6 +1363,8 @@ PK11_InitSlot(SECMODModule *mod, CK_SLOT_ID slotID, PK11SlotInfo *slot)
     }
     /* if the token is present, initialize it */
     if ((slotInfo.flags & CKF_TOKEN_PRESENT) != 0) {
+	/* session was initialized to CK_INVALID_SESSION when the slot
+  	 * was created */
 	rv = PK11_InitToken(slot,PR_TRUE);
 	/* the only hard failures are on permanent devices, or function
 	 * verify failures... function verify failures are already handled
@@ -1826,10 +1804,15 @@ PK11_DoesMechanism(PK11SlotInfo *slot, CK_MECHANISM_TYPE type)
 	return (slot->mechanismBits[type & 0xff] & (1 << (type >> 8)))  ?
 		PR_TRUE : PR_FALSE;
     }
-	   
+
+    PK11_EnterSlotMonitor(slot);  
     for (i=0; i < (int) slot->mechanismCount; i++) {
-	if (slot->mechanismList[i] == type) return PR_TRUE;
+	if (slot->mechanismList[i] == type) {
+	    PK11_ExitSlotMonitor(slot);
+	    return PR_TRUE;
+	}
     }
+    PK11_ExitSlotMonitor(slot);
     return PR_FALSE;
 }
 

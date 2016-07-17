@@ -73,7 +73,6 @@ pk11_CheckPassword(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 						(unsigned char *)pw,len);
 	slot->lastLoginCheck = 0;
 	mustRetry = PR_FALSE;
-	if (!alreadyLocked) PK11_ExitSlotMonitor(slot);
 	switch (crv) {
 	/* if we're already logged in, we're good to go */
 	case CKR_OK:
@@ -100,7 +99,16 @@ pk11_CheckPassword(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 		break;
 	    }
 	    if (retry++ == 0) {
+		/* we already know the this session is invalid */
+		slot->session = CK_INVALID_SESSION; 
+		/* can't enter PK11_InitToken holding the lock
+		 * This is safe because the only places that tries to
+		 * hold the slot monitor over this call pass their own
+		 * session, which would have failed above.
+		 * (session != slot->session) */
+		PK11_ExitSlotMonitor(slot);
 		rv = PK11_InitToken(slot,PR_FALSE);
+		PK11_EnterSlotMonitor(slot);
 		if (rv == SECSuccess) {
 		    if (slot->session != CK_INVALID_SESSION) {
 			session = slot->session; /* we should have 
@@ -118,6 +126,7 @@ pk11_CheckPassword(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 	    PORT_SetError(PK11_MapError(crv));
 	    rv = SECFailure; /* some failure we can't fix by retrying */
 	}
+	if (!alreadyLocked) PK11_ExitSlotMonitor(slot);
     } while (mustRetry);
     return rv;
 }
@@ -455,14 +464,18 @@ done:
     slot->lastLoginCheck = 0;
     PK11_RestoreROSession(slot,rwsession);
     if (rv == SECSuccess) {
+	PK11_EnterSlotMonitor(slot);
         /* update our view of the world */
+	if (slot->session != CK_INVALID_SESSION) {
+		PK11_GETTAB(slot)->C_CloseSession(slot->session);
+		slot->session = CK_INVALID_SESSION;
+	}
+	PK11_ExitSlotMonitor(slot);
         PK11_InitToken(slot,PR_TRUE);
 	if (slot->needLogin) {
-	    PK11_EnterSlotMonitor(slot);
 	    PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 						(unsigned char *)userpw,len);
 	    slot->lastLoginCheck = 0;
-	    PK11_ExitSlotMonitor(slot);
 	}
     }
     return rv;
@@ -506,7 +519,7 @@ PK11_ChangePW(PK11SlotInfo *slot, const char *oldpw, const char *newpw)
     PK11_RestoreROSession(slot,rwsession);
 
     /* update our view of the world */
-    PK11_InitToken(slot,PR_TRUE);
+    /* PK11_InitToken(slot,PR_TRUE); */
     return rv;
 }
 

@@ -245,6 +245,16 @@ nssSlot_Refresh
     if (slot->token && slot->token->base.name[0] == 0) {
 	doit = PR_TRUE;
     }
+    /* invalidate the session in the nss3slot if we haven't done an init
+     * token since we noticed that the token->default session is invalid.
+     * This works because the monitor lock and the token session lock are the
+     * same locks */
+    PK11_EnterSlotMonitor(nss3slot);
+    if ((slot->token == NULL) || (slot->token->defaultSession == NULL) || 
+		(slot->token->defaultSession->handle == CK_INVALID_SESSION)) {
+	nss3slot->session = CK_INVALID_SESSION;
+    }
+    PK11_ExitSlotMonitor(nss3slot);
     if (PK11_InitToken(nss3slot, PR_FALSE) != SECSuccess) {
 	return PR_FAILURE;
     }
@@ -252,7 +262,8 @@ nssSlot_Refresh
 	nssTrustDomain_UpdateCachedTokenCerts(slot->token->trustDomain, 
 	                                      slot->token);
     }
-    return nssToken_Refresh(slot->token);
+    /* no need to call nssToken_Refresh since PK11_Init has already done so */
+    return PR_SUCCESS;
 }
 
 NSS_IMPLEMENT PRStatus
