@@ -3754,9 +3754,6 @@ ssl3_ComputeMasterSecretInt(sslSocket *ss, PK11SymKey *pms,
     CK_TLS12_MASTER_KEY_DERIVE_PARAMS master_params;
     unsigned int      master_params_len;
 
-    PORT_Assert( ss->opt.noLocks || ssl_HaveSSL3HandshakeLock(ss));
-    PORT_Assert( ss->opt.noLocks || ssl_HaveSpecWriteLock(ss));
-    PORT_Assert(ss->ssl3.prSpec == ss->ssl3.pwSpec);
     if (isTLS12) {
 	if(isDH) master_derive = CKM_TLS12_MASTER_KEY_DERIVE_DH;
 	else master_derive = CKM_TLS12_MASTER_KEY_DERIVE;
