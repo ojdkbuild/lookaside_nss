@@ -67,7 +67,7 @@ SSL_GetChannelInfo(PRFileDesc *fd, SSLChannelInfo *info, PRUintn len)
 	    inf.creationTime   = sid->creationTime;
 	    inf.lastAccessTime = sid->lastAccessTime;
 	    inf.expirationTime = sid->expirationTime;
-            inf.extendedMasterSecretUsed = sid->u.ssl3.keys.extendedMasterSecretUsed;
+            inf.reservedNotSupported = PR_FALSE;
 
 	    if (ss->version < SSL_LIBRARY_VERSION_3_0) { /* SSL2 */
 	        inf.sessionIDLength = SSL2_SESSIONID_BYTES;
