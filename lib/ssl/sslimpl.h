@@ -852,7 +852,8 @@ typedef struct DTLSQueuedMessageStr {
 typedef enum {
     handshake_hash_unknown = 0,
     handshake_hash_combo = 1,  /* The MD5/SHA-1 combination */
-    handshake_hash_single = 2  /* A single hash */
+    handshake_hash_single = 2, /* A single hash */
+    handshake_hash_record
 } SSL3HandshakeHashType;
 
 /*
@@ -885,12 +886,9 @@ typedef struct SSL3HandshakeStateStr {
      * SSL 3.0 - TLS 1.1 use both |md5| and |sha|. |md5| is used for MD5 and
      * |sha| for SHA-1.
      * TLS 1.2 and later use only |sha|, for SHA-256. */
-    /* NOTE: On the client side, TLS 1.2 and later use |md5| as a backup
-     * handshake hash for generating client auth signatures. Confusingly, the
-     * backup hash function is SHA-1. */
-#define backupHash md5
     PK11Context *         md5;
     PK11Context *         sha;
+    SSLHashType tls12CertVerifyHash;
 
 const ssl3KEADef *        kea_def;
     ssl3CipherSuite       cipher_suite;
@@ -1457,6 +1455,7 @@ extern int       ssl_Do1stHandshake(sslSocket *ss);
 extern SECStatus sslBuffer_Grow(sslBuffer *b, unsigned int newLen);
 extern SECStatus sslBuffer_Append(sslBuffer *b, const void * data, 
 		                  unsigned int len);
+extern void sslBuffer_Clear(sslBuffer *b);
 
 extern void      ssl2_UseClearSendFunc(sslSocket *ss);
 extern void      ssl_ChooseSessionIDProcs(sslSecurityInfo *sec);
