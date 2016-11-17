@@ -6346,6 +6346,7 @@ sendDHClientKeyExchange(sslSocket * ss, SECKEYPublicKey * svrPubKey)
 
     if (pms == NULL) {
 	ssl_MapLowLevelError(SSL_ERROR_CLIENT_KEY_EXCHANGE_FAILURE);
+	rv = SECFailure;
 	goto loser;
     }
 
@@ -7117,7 +7118,6 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	SECItem          dh_Ys     = {siBuffer, NULL, 0};
         unsigned dh_p_bits;
         unsigned dh_g_bits;
-        unsigned dh_Ys_bits;
         PRInt32  minDH;
 
     	rv = ssl3_ConsumeHandshakeVariable(ss, &dh_p, 2, &b, &length);
@@ -7146,9 +7146,10 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     	if (rv != SECSuccess) {
 	    goto loser;		/* malformed. */
 	}
-        dh_Ys_bits = SECKEY_BigIntegerBitLength(&dh_Ys);
-        if (dh_Ys_bits > dh_p_bits || dh_Ys_bits <= 1)
-	    goto alert_loser;
+        if (!ssl_IsValidDHEShare(&dh_p, &dh_Ys)) {
+            errCode = SSL_ERROR_WEAK_SERVER_EPHEMERAL_DH_KEY;
+            goto alert_loser;
+        }
 	if (isTLS12) {
 	    rv = ssl3_ConsumeSignatureAndHashAlgorithm(ss, &b, &length,
 						       &sigAndHash);
@@ -10118,6 +10119,12 @@ ssl3_HandleDHClientKeyExchange(sslSocket *ss,
 	                               2, &b, &length);
     if (rv != SECSuccess) {
 	goto loser;
+    }
+
+    if (!ssl_IsValidDHEShare(&srvrPubKey->u.dh.prime,
+                             &clntPubKey.u.dh.publicValue)) {
+        PORT_SetError(SSL_ERROR_CLIENT_KEY_EXCHANGE_FAILURE);
+        return SECFailure;
     }
 
     isTLS = (PRBool)(ss->ssl3.prSpec->version > SSL_LIBRARY_VERSION_3_0);

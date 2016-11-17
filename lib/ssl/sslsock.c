@@ -1469,6 +1469,54 @@ SSL_DHEGroupPrefSet(PRFileDesc *fd,
     return SECSuccess;
 }
 
+/* This validates dh_Ys against the group prime. */
+PRBool
+ssl_IsValidDHEShare(const SECItem *dh_p, const SECItem *dh_Ys)
+{
+    unsigned int size_p = SECKEY_BigIntegerBitLength(dh_p);
+    unsigned int size_y = SECKEY_BigIntegerBitLength(dh_Ys);
+    unsigned int commonPart;
+    int cmp;
+
+    if (dh_p->len == 0 || dh_Ys->len == 0) {
+        return PR_FALSE;
+    }
+
+    /* Check that the prime is at least odd. */
+    if ((dh_p->data[dh_p->len - 1] & 0x01) == 0) {
+        return PR_FALSE;
+    }
+    /* dh_Ys can't be 1, or bigger than dh_p. */
+    if (size_y <= 1 || size_y > size_p) {
+        return PR_FALSE;
+    }
+    /* If dh_Ys is shorter, then it's definitely smaller than p-1. */
+    if (size_y < size_p) {
+        return PR_TRUE;
+    }
+
+    /* Compare the common part of each, minus the final octet. */
+    commonPart = (size_p + 7) / 8;
+    PORT_Assert(commonPart <= dh_Ys->len);
+    PORT_Assert(commonPart <= dh_p->len);
+    cmp = PORT_Memcmp(dh_Ys->data + dh_Ys->len - commonPart,
+                      dh_p->data + dh_p->len - commonPart, commonPart - 1);
+    if (cmp < 0) {
+        return PR_TRUE;
+    }
+    if (cmp > 0) {
+        return PR_FALSE;
+    }
+
+    /* The last octet of the prime is the only thing that is different and that
+     * has to be two greater than the share, otherwise we have Ys == p - 1,
+     * and that means small subgroups. */
+    if (dh_Ys->data[dh_Ys->len - 1] >= (dh_p->data[dh_p->len - 1] - 1)) {
+        return PR_FALSE;
+    }
+
+    return PR_TRUE;
+}
 
 PRCallOnceType gWeakDHParamsRegisterOnce;
 int gWeakDHParamsRegisterError;

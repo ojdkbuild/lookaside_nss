@@ -1656,6 +1656,7 @@ int ssl3_GatherCompleteHandshake(sslSocket *ss, int flags);
 extern SECStatus ssl3_CreateRSAStepDownKeys(sslSocket *ss);
 
 extern SECStatus ssl3_SelectDHParams(sslSocket *ss);
+extern PRBool ssl_IsValidDHEShare(const SECItem *dh_p, const SECItem *dh_Ys);
 
 #ifndef NSS_DISABLE_ECC
 extern void      ssl3_FilterECCipherSuitesByServerCerts(sslSocket *ss);
