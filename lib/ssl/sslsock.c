@@ -152,7 +152,7 @@ static const PRUint16 srtpCiphers[] = {
 const sslNamedGroupDef ssl_named_groups[] = {
     /* Note that 256 for 25519 is a lie, but we only use it for checking bit
      * security and expect 256 bits there (not 255). */
-    { ssl_grp_ec_curve25519, 256, ssl_kea_ecdh, SEC_OID_CURVE25519, PR_TRUE },
+    { ssl_grp_ec_curve25519, 256, ssl_kea_ecdh, SEC_OID_CURVE25519, PR_FALSE },
     ECGROUP(secp256r1, 256, SECP256R1, PR_TRUE),
     ECGROUP(secp384r1, 384, SECP384R1, PR_TRUE),
     ECGROUP(secp521r1, 521, SECP521R1, PR_TRUE),
