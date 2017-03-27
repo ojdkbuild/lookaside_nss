@@ -258,7 +258,7 @@ typedef struct SSLChannelInfoStr {
      * This field only has meaning in TLS < 1.3 and will be set to
      *  PR_FALSE in TLS 1.3.
      */
-    PRBool extendedMasterSecretUsed;
+    PRBool reservedNotSupported;
 
     /* The following fields were added in NSS 3.25.
      * This field only has meaning in TLS >= 1.3, and indicates on the
