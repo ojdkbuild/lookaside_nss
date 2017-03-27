@@ -287,20 +287,6 @@ TEST_P(TlsConnectStreamPre13, ConfiguredGroupsRenegotiate) {
             ssl_sig_rsa_pss_sha256);
 }
 
-TEST_P(TlsKeyExchangeTest, Curve25519) {
-  Reset(TlsAgent::kServerEcdsa256);
-  const std::vector<SSLNamedGroup> groups = {
-      ssl_grp_ec_curve25519, ssl_grp_ec_secp256r1, ssl_grp_ec_secp521r1};
-  EnsureKeyShareSetup();
-  ConfigNamedGroups(groups);
-  Connect();
-
-  CheckKeys(ssl_kea_ecdh, ssl_grp_ec_curve25519, ssl_auth_ecdsa,
-            ssl_sig_ecdsa_secp256r1_sha256);
-  const std::vector<SSLNamedGroup> shares = {ssl_grp_ec_curve25519};
-  CheckKEXDetails(groups, shares);
-}
-
 TEST_P(TlsConnectGenericPre13, GroupPreferenceServerPriority) {
   EnsureTlsSetup();
   client_->DisableAllCiphers();
