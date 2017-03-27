@@ -46,7 +46,6 @@ ectest_genkeydb_test()
     return $?
   fi
   curves=( \
-    "curve25519" \
     "secp256r1" \
     "secp384r1" \
     "secp521r1" \
