@@ -399,7 +399,13 @@ ssl_ConfigRsaPkcs1CertByUsage(sslSocket *ss, CERTCertificate *cert,
     PRBool ku_enc = (PRBool)(cert->keyUsage & KU_KEY_ENCIPHERMENT);
 
     if ((data->authType == ssl_auth_rsa_sign && ku_sig) ||
+#if 0
+    /* Disable, while we are waiting for an upstream fix to
+     * https://bugzilla.mozilla.org/show_bug.cgi?id=1311950
+     * (NSS does not check if token supports RSA-PSS before using it to sign)
+     **/
         (data->authType == ssl_auth_rsa_pss && ku_sig) ||
+#endif
         (data->authType == ssl_auth_rsa_decrypt && ku_enc)) {
         return ssl_ConfigCert(ss, cert, keyPair, data);
     }
@@ -416,12 +422,18 @@ ssl_ConfigRsaPkcs1CertByUsage(sslSocket *ss, CERTCertificate *cert,
             return rv;
         }
 
+#if 0
+    /* Disable, while we are waiting for an upstream fix to
+     * https://bugzilla.mozilla.org/show_bug.cgi?id=1311950
+     * (NSS does not check if token supports RSA-PSS before using it to sign)
+     **/
         /* This certificate is RSA, assume that it's also PSS. */
         data->authType = ssl_auth_rsa_pss;
         rv = ssl_ConfigCert(ss, cert, keyPair, data);
         if (rv != SECSuccess) {
             return rv;
         }
+#endif
     }
 
     if (ku_enc) {
