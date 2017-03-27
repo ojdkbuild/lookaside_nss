@@ -5,7 +5,6 @@
 #ifndef _KEYI_H_
 #define _KEYI_H_
 
-
 SEC_BEGIN_PROTOS
 /* NSS private functions */
 /* map an oid to a keytype... actually this function and it's converse
@@ -16,7 +15,14 @@ KeyType seckey_GetKeyType(SECOidTag pubKeyOid);
  * algorithm, key and parameters (parameters is the parameters field
  * of a algorithm ID structure (SECAlgorithmID)*/
 SECStatus sec_DecodeSigAlg(const SECKEYPublicKey *key, SECOidTag sigAlg,
-             const SECItem *param, SECOidTag *encalg, SECOidTag *hashalg);
+                           const SECItem *param, SECOidTag *encalg, SECOidTag *hashalg);
+
+/*
+ * Set the point encoding of a SECKEYPublicKey from the OID.
+ * This has to be called on any SECKEYPublicKey holding a SECKEYECPublicKey
+ * before it can be used. The encoding is used to dermine the public key size.
+ */
+SECStatus seckey_SetPointEncoding(PLArenaPool *arena, SECKEYPublicKey *pubKey);
 
 SEC_END_PROTOS
 
