@@ -11068,8 +11068,10 @@ ssl3_ComputeTLSFinished(sslSocket *ss, ssl3CipherSpec *spec,
     tls_mac_params.ulServerOrClient = isServer ? 1 : 2;
     param.data = (unsigned char *)&tls_mac_params;
     param.len = sizeof(tls_mac_params);
-    prf_context = PK11_CreateContextBySymKey(CKM_TLS_MAC, CKA_SIGN,
-                                             spec->master_secret, &param);
+    /* RHEL 7.2 had the wrong number for CKM_TLS12_MACH instead of CKM_TLS_MAC. In the new scheme that
+     * number matches with CKM_TLS_KDF, so until softoken gets updated, use CKM_TLS_KDF on RHEL7 */
+    prf_context = PK11_CreateContextBySymKey(CKM_TLS_KDF, CKA_SIGN,
+ 					     spec->master_secret, &param);
     if (!prf_context)
         return SECFailure;
 
