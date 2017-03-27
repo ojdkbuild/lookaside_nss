@@ -688,7 +688,7 @@ void TlsAgent::CheckExtendedMasterSecret(bool expected) {
   if (version() >= SSL_LIBRARY_VERSION_TLS_1_3) {
     expected = PR_TRUE;
   }
-  ASSERT_EQ(expected, info_.extendedMasterSecretUsed != PR_FALSE)
+  ASSERT_EQ(expected, info_.reservedNotSupported != PR_FALSE)
       << "unexpected extended master secret state for " << name_;
 }
 

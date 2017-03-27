@@ -385,7 +385,7 @@ printSecurityInfo(PRFileDesc *fd)
                     channel.authKeyBits, suite.authAlgorithmName,
                     channel.keaKeyBits, suite.keaTypeName,
                     channel.compressionMethodName,
-                    channel.extendedMasterSecretUsed ? "Yes" : "No");
+		    channel.reservedNotSupported ? "Yes": "No");
         }
     }
     if (verbose) {
