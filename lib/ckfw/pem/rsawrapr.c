@@ -93,6 +93,8 @@ pem_PublicModulusLen(NSSLOWKEYPublicKey *pubk)
     return 0;
 }
 
+/* unused functions */
+#if 0
 static SHA1Context *SHA1_CloneContext(SHA1Context * original)
 {
     SHA1Context *clone = NULL;
@@ -215,6 +217,7 @@ oaep_xor_with_h2(unsigned char *salt, unsigned int saltlen,
 
     return SECSuccess;
 }
+#endif /* unused functions */
 
 /*
  * Format one block of data for public/private key encryption using

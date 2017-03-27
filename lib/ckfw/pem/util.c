@@ -131,7 +131,8 @@ static SECStatus FileToItem(SECItem * dst, PRFileDesc * src)
     return SECFailure;
 }
 
-int
+/* FIX: Returns a SECStatus yet callers take result as a count */
+SECStatus
 ReadDERFromFile(SECItem *** derlist, char *filename, PRBool ascii,
 		int *cipher, char **ivstring, PRBool certsonly)
 {
@@ -237,7 +238,12 @@ ReadDERFromFile(SECItem *** derlist, char *filename, PRBool ascii,
 		    goto loser;
 		}
                 if ((certsonly && !key) || (!certsonly && key)) {
+		    error = CKR_OK;
 		    PUT_Object(der, error);
+		    if (error != CKR_OK) {
+			free(der);
+			goto loser;
+		    }
                 } else {
                     free(der->data);
                     free(der);
@@ -255,7 +261,12 @@ ReadDERFromFile(SECItem *** derlist, char *filename, PRBool ascii,
 	    }
 
 	    /* NOTE: This code path has never been tested. */
+	    error = CKR_OK;
 	    PUT_Object(der, error);
+	    if (error != CKR_OK) {
+		free(der);
+		goto loser;
+	    }
 	}
 
 	nss_ZFreeIf(filedata.data);

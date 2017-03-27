@@ -630,6 +630,11 @@ pem_DestroyInternalObject
         if (io->u.key.ivstring)
             free(io->u.key.ivstring);
         break;
+    case pemAll:
+        /* pemAll is not used, keep the compiler happy
+         * TODO: investigate a proper solution
+         */
+        return;
     }
 
     if (NULL != gobj)
@@ -1044,7 +1049,9 @@ pem_CreateObject
     int nobjs = 0;
     int i;
     int objid;
+#if 0
     pemToken *token;
+#endif
     int cipher;
     char *ivstring = NULL;
     pemInternalObject *listObj = NULL;
@@ -1073,7 +1080,9 @@ pem_CreateObject
     }
     slotID = nssCKFWSlot_GetSlotID(fwSlot);
 
+#if 0
     token = (pemToken *) mdToken->etc;
+#endif
 
     /*
      * only create keys and certs.
@@ -1114,7 +1123,11 @@ pem_CreateObject
     }
 
     if (objClass == CKO_CERTIFICATE) {
-        nobjs = ReadDERFromFile(&derlist, filename, PR_TRUE, &cipher, &ivstring, PR_TRUE /* certs only */);
+        /* TODO: Fix discrepancy between our usage of the return value as
+         * as an int and the declaration as a SECStatus. Typecasting as a
+         * temporary workaround.
+         */
+        nobjs = (int) ReadDERFromFile(&derlist, filename, PR_TRUE, &cipher, &ivstring, PR_TRUE /* certs only */);
         if (nobjs < 1)
             goto loser;
 

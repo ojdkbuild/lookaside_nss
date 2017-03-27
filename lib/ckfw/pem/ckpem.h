@@ -233,6 +233,9 @@ struct pemLOWKEYPrivateKeyStr {
 };
 typedef struct pemLOWKEYPrivateKeyStr pemLOWKEYPrivateKey;
 
+/* NOTE: Discrepancy with the the way callers use of the return value as a count
+ * Fix this when we sync. up with the cleanup work being done at nss-pem project.
+ */
 SECStatus ReadDERFromFile(SECItem ***derlist, char *filename, PRBool ascii, int *cipher, char **ivstring, PRBool certsonly);
 const NSSItem * pem_FetchAttribute ( pemInternalObject *io, CK_ATTRIBUTE_TYPE type);
 void pem_PopulateModulusExponent(pemInternalObject *io);
