@@ -81,7 +81,8 @@ if [ -f ${BINDIR}/fbectest ]; then
   fi
 fi
 if [ -f ${BINDIR}/pk11ectest ]; then
-  PK11_ECTEST_OUT=$(pk11ectest -n -d 2>&1)
+  PK11_ECTEST_OUT=$(pk11ectest -n 2>&1)
+  echo $PK11_ECTEST_OUT
   PK11_ECTEST_OUT=`echo $PK11_ECTEST_OUT | grep -i 'not okay\|Assertion failure'`
   if [ -n "$PK11_ECTEST_OUT" ] ; then
     html_failed "pk11 ec tests"
