@@ -193,37 +193,4 @@ TEST_F(TlsPrfTest, ExtendedMsParamErr) {
   CheckForError(CKM_SHA256, kIncorrectSize, kPmsSize, 0);
 }
 
-// Test matrix:
-//
-//            DH  RSA
-//  TLS_PRF   1   2
-//  SHA256    3   4
-TEST_F(TlsPrfTest, ExtendedMsDhTlsPrf) {
-  Init();
-  ComputeAndVerifyMs(CKM_NSS_TLS_EXTENDED_MASTER_KEY_DERIVE_DH, CKM_TLS_PRF,
-                     nullptr, kExpectedOutputEmsTlsPrf);
-}
-
-TEST_F(TlsPrfTest, ExtendedMsRsaTlsPrf) {
-  Init();
-  ComputeAndVerifyMs(CKM_NSS_TLS_EXTENDED_MASTER_KEY_DERIVE, CKM_TLS_PRF,
-                     &pms_version_, kExpectedOutputEmsTlsPrf);
-  EXPECT_EQ(0, pms_version_.major);
-  EXPECT_EQ(1, pms_version_.minor);
-}
-
-TEST_F(TlsPrfTest, ExtendedMsDhSha256) {
-  Init();
-  ComputeAndVerifyMs(CKM_NSS_TLS_EXTENDED_MASTER_KEY_DERIVE_DH, CKM_SHA256,
-                     nullptr, kExpectedOutputEmsSha256);
-}
-
-TEST_F(TlsPrfTest, ExtendedMsRsaSha256) {
-  Init();
-  ComputeAndVerifyMs(CKM_NSS_TLS_EXTENDED_MASTER_KEY_DERIVE, CKM_SHA256,
-                     &pms_version_, kExpectedOutputEmsSha256);
-  EXPECT_EQ(0, pms_version_.major);
-  EXPECT_EQ(1, pms_version_.minor);
-}
-
 }  // namespace nss_test
