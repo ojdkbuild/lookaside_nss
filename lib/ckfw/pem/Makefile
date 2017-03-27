@@ -43,8 +43,7 @@ include config.mk
 EXTRA_LIBS = \
 	$(DIST)/lib/$(LIB_PREFIX)nssckfw.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nssb.$(LIB_SUFFIX) \
-	$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX) \
-	$(DIST)/lib/$(LIB_PREFIX)nssutil.$(LIB_SUFFIX) \
+	$(FREEBL_LIB_DIR)/$(LIB_PREFIX)freebl.$(LIB_SUFFIX) \
 	$(NULL)
 
 # can't do this in manifest.mn because OS_TARGET isn't defined there.
@@ -56,6 +55,9 @@ EXTRA_LIBS += \
 	-lplc4 \
 	-lplds4 \
 	-lnspr4 \
+	-L$(NSSUTIL_LIB_DIR) \
+	-lnssutil3 \
+	-lfreebl3
 	$(NULL)
 else 
 EXTRA_SHARED_LIBS += \
@@ -74,6 +76,9 @@ EXTRA_LIBS += \
 	-lplc4 \
 	-lplds4 \
 	-lnspr4 \
+	-L$(NSSUTIL_LIB_DIR) \
+	-lnssutil3 \
+	-lfreebl3 \
 	$(NULL)
 endif
 

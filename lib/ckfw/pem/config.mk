@@ -41,6 +41,11 @@ CONFIG_CVS_ID = "@(#) $RCSfile: config.mk,v $ $Revision: 1.11 $ $Date: 2005/01/2
 #  are specifed as dependencies within rules.mk.
 #
 
+
+EXTRA_LIBS += \
+	$(SOFTOKEN_LIB_DIR)/$(LIB_PREFIX)freebl.$(LIB_SUFFIX) \
+	$(NULL)
+
 TARGETS        = $(SHARED_LIBRARY)
 LIBRARY        =
 IMPORT_LIBRARY =
@@ -67,5 +72,24 @@ ifeq ($(OS_TARGET),SunOS)
 # The -R '$ORIGIN' linker option instructs this library to search for its
 # dependencies in the same directory where it resides.
 MKSHLIB += -R '$$ORIGIN'
+endif
+
+# If a platform has a system nssutil, set USE_SYSTEM_NSSUTIL to 1 and
+# NSSUTIL_LIBS to the linker command-line arguments for the system nssutil
+# (for example, -lnssutil3 on fedora) in the platform's config file in coreconf.
+ifdef USE_SYSTEM_NSSUTIL
+OS_LIBS += $(NSSUTIL_LIBS)
+else
+NSSUTIL_LIBS = $(DIST)/lib/$(LIB_PREFIX)nssutil3.$(LIB_SUFFIX)
+EXTRA_LIBS += $(NSSUTIL_LIBS)
+endif
+# If a platform has a system freebl, set USE_SYSTEM_FREEBL to 1 and
+# FREEBL_LIBS to the linker command-line arguments for the system nssutil
+# (for example, -lfreebl3 on fedora) in the platform's config file in coreconf.
+ifdef USE_SYSTEM_FREEBL
+OS_LIBS += $(FREEBL_LIBS)
+else
+FREEBL_LIBS = $(DIST)/lib/$(LIB_PREFIX)freebl3.$(LIB_SUFFIX)
+EXTRA_LIBS += $(FREEBL_LIBS)
 endif
 

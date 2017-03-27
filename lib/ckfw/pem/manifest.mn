@@ -65,4 +65,4 @@ REQUIRES = nspr
 
 LIBRARY_NAME = nsspem
 
-#EXTRA_SHARED_LIBS = -L$(DIST)/lib -lnssckfw -lnssb -lplc4 -lplds4
+EXTRA_SHARED_LIBS = -L$(DIST)/lib -lnssckfw -lnssb -lplc4 -lplds4 -L$(NSS_LIB_DIR) -lnssutil3 -lfreebl3 -lsoftokn3
