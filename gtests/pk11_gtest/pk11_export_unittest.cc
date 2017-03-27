@@ -61,6 +61,4 @@ class Pkcs11ExportTest : public ::testing::Test {
 
 TEST_F(Pkcs11ExportTest, DeriveNonExport) { Derive(false); }
 
-TEST_F(Pkcs11ExportTest, DeriveExport) { Derive(true); }
-
 }  // namespace nss_test
