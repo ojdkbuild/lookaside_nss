@@ -326,10 +326,7 @@ INSTANTIATE_CIPHER_TEST_P(AEAD, All, V12, kDummyNamedGroupParams,
                           TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
                           TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
                           TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-                          TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
-                          TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                          TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-                          TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256);
+                          TLS_DHE_RSA_WITH_AES_256_GCM_SHA384);
 INSTANTIATE_CIPHER_TEST_P(
     CBC12, All, V12, kDummyNamedGroupParams, kDummySignatureSchemesParams,
     TLS_DHE_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256,
@@ -361,7 +358,7 @@ INSTANTIATE_CIPHER_TEST_P(
 INSTANTIATE_CIPHER_TEST_P(TLS13, All, V13,
                           ::testing::ValuesIn(kFasterDHEGroups),
                           ::testing::ValuesIn(kSignatureSchemesParamsArr),
-                          TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256,
+                          TLS_AES_128_GCM_SHA256,
                           TLS_AES_256_GCM_SHA384);
 INSTANTIATE_CIPHER_TEST_P(TLS13AllGroups, All, V13,
                           ::testing::ValuesIn(kAllDHEGroups),
@@ -446,9 +443,7 @@ static const SecStatusParams kSecStatusTestValuesArr[] = {
     {SSL_LIBRARY_VERSION_TLS_1_2, TLS_RSA_WITH_AES_128_GCM_SHA256,
      "AES-128-GCM", 128},
     {SSL_LIBRARY_VERSION_TLS_1_2, TLS_RSA_WITH_AES_256_GCM_SHA384,
-     "AES-256-GCM", 256},
-    {SSL_LIBRARY_VERSION_TLS_1_2, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-     "ChaCha20-Poly1305", 256}};
+     "AES-256-GCM", 256}};
 INSTANTIATE_TEST_CASE_P(TestSecurityStatus, SecurityStatusTest,
                         ::testing::ValuesIn(kSecStatusTestValuesArr));
 
