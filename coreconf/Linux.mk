@@ -189,6 +189,12 @@ endif
 endif
 endif
 
+# harden DSOs/executables a bit against exploits
+ifeq (2.6,$(firstword $(sort 2.6 $(OS_RELEASE))))
+DSO_LDOPTS+=-Wl,-z,relro
+LDFLAGS	+= -Wl,-z,relro
+endif
+
 USE_SYSTEM_ZLIB = 1
 ZLIB_LIBS = -lz
 
