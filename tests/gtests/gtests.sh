@@ -82,7 +82,7 @@ gtest_cleanup()
 }
 
 ################## main #################################################
-GTESTS="der_gtest pk11_gtest util_gtest"
+GTESTS="der_gtest pk11_gtest"
 gtest_init $0
 gtest_start
 gtest_cleanup

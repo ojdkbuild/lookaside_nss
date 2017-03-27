@@ -48,6 +48,6 @@ REQUIRES = nspr nss libdbm gtest
 
 PROGRAM = ssl_gtest
 EXTRA_LIBS = $(DIST)/lib/$(LIB_PREFIX)gtest.$(LIB_SUFFIX) \
-             $(DIST)/lib/$(LIB_PREFIX)softokn.$(LIB_SUFFIX)
+             -lsoftokn3
 
 USE_STATIC_LIBS = 1

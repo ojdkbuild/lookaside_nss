@@ -9,7 +9,6 @@ DIRS = \
 	google_test \
 	common \
 	der_gtest \
-	util_gtest \
 	pk11_gtest \
 	ssl_gtest \
         nss_bogo_shim \
