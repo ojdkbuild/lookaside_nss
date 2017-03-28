@@ -33,6 +33,7 @@ prng_ResetForFuzzing(PZLock *rng_lock)
 SECStatus
 prng_GenerateDeterministicRandomBytes(PZLock *rng_lock, void *dest, size_t len)
 {
+    ChaCha20Poly1305Context *cx;
     static const uint8_t key[32];
     uint8_t nonce[12] = { 0 };
 
@@ -49,7 +50,7 @@ prng_GenerateDeterministicRandomBytes(PZLock *rng_lock, void *dest, size_t len)
     memcpy(nonce, &globalNumCalls, sizeof(globalNumCalls));
     globalNumCalls++;
 
-    ChaCha20Poly1305Context *cx =
+    cx =
         ChaCha20Poly1305_CreateContext(key, sizeof(key), 16);
     if (!cx) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);

@@ -34,6 +34,7 @@ fsum(felem *output, const felem *in)
 static void
 fdifference_backwards(felem *ioutput, const felem *iin)
 {
+    int64_t t;
     static const int64_t twotothe51 = ((int64_t)1l << 51);
     const int64_t *in = (const int64_t *)iin;
     int64_t *out = (int64_t *)ioutput;
@@ -47,7 +48,6 @@ fdifference_backwards(felem *ioutput, const felem *iin)
     // An arithmetic shift right of 63 places turns a positive number to 0 and a
     // negative number to all 1's. This gives us a bitmask that lets us avoid
     // side-channel prone branches.
-    int64_t t;
 
 #define NEGCHAIN(a, b)        \
     t = out[a] >> 63;         \

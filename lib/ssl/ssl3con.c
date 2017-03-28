@@ -2262,6 +2262,7 @@ ssl3_ComputeRecordMAC(
 {
     const ssl3MACDef *mac_def;
     SECStatus rv;
+    PK11Context *mac_context;
 
     PRINT_BUF(95, (NULL, "frag hash1: header", header, headerLen));
     PRINT_BUF(95, (NULL, "frag hash1: input", input, inputLength));
@@ -2272,7 +2273,7 @@ ssl3_ComputeRecordMAC(
         return SECSuccess;
     }
 
-    PK11Context *mac_context =
+    mac_context =
         (useServerMacKey ? spec->server.write_mac_context
                          : spec->client.write_mac_context);
     rv = PK11_DigestBegin(mac_context);
