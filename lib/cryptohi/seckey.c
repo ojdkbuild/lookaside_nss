@@ -547,23 +547,6 @@ CERT_GetCertKeyType(const CERTSubjectPublicKeyInfo *spki)
     return seckey_GetKeyType(SECOID_GetAlgorithmTag(&spki->algorithm));
 }
 
-/* Ensure pubKey contains an OID */
-static SECStatus
-seckey_HasCurveOID(const SECKEYPublicKey *pubKey)
-{
-    SECItem oid;
-    SECStatus rv;
-    PORTCheapArenaPool tmpArena;
-
-    PORT_InitCheapArena(&tmpArena, DER_DEFAULT_CHUNKSIZE);
-    /* If we can decode it, an OID is available. */
-    rv = SEC_QuickDERDecodeItem(&tmpArena.arena, &oid,
-                                SEC_ASN1_GET(SEC_ObjectIDTemplate),
-                                &pubKey->u.ec.DEREncodedParams);
-    PORT_DestroyCheapArena(&tmpArena);
-    return rv;
-}
-
 static SECKEYPublicKey *
 seckey_ExtractPublicKey(const CERTSubjectPublicKeyInfo *spki)
 {
@@ -656,8 +639,7 @@ seckey_ExtractPublicKey(const CERTSubjectPublicKeyInfo *spki)
                 if (rv != SECSuccess) {
                     break;
                 }
-                pubk->u.ec.encoding = ECPoint_Undefined;
-                rv = seckey_HasCurveOID(pubk);
+                rv = seckey_SetPointEncoding(arena, pubk);
                 if (rv == SECSuccess) {
                     return pubk;
                 }
@@ -1180,16 +1162,16 @@ SECKEY_CopyPublicKey(const SECKEYPublicKey *pubk)
             break;
         case ecKey:
             copyk->u.ec.size = pubk->u.ec.size;
-            rv = seckey_HasCurveOID(pubk);
-            if (rv != SECSuccess) {
-                break;
-            }
             rv = SECITEM_CopyItem(arena, &copyk->u.ec.DEREncodedParams,
                                   &pubk->u.ec.DEREncodedParams);
             if (rv != SECSuccess) {
                 break;
             }
-            copyk->u.ec.encoding = ECPoint_Undefined;
+            rv = seckey_SetPointEncoding(arena, copyk);
+            if (rv != SECSuccess) {
+                break;
+            }
+            PORT_Assert(copyk->u.ec.encoding == pubk->u.ec.encoding);
             rv = SECITEM_CopyItem(arena, &copyk->u.ec.publicValue,
                                   &pubk->u.ec.publicValue);
             break;
@@ -1960,4 +1942,40 @@ SECKEY_GetECCOid(const SECKEYECParams *params)
         return 0;
 
     return oidData->offset;
+}
+
+/* Set curve encoding in SECKEYECPublicKey in pubKey from OID.
+ * If the encoding is not set, determining the key size of EC public keys will
+ * fail.
+ */
+SECStatus
+seckey_SetPointEncoding(PLArenaPool *arena, SECKEYPublicKey *pubKey)
+{
+    SECItem oid;
+    SECOidTag tag;
+    SECStatus rv;
+
+    /* decode the OID tag */
+    rv = SEC_QuickDERDecodeItem(arena, &oid, SEC_ASN1_GET(SEC_ObjectIDTemplate),
+                                &pubKey->u.ec.DEREncodedParams);
+    if (rv != SECSuccess) {
+        return SECFailure;
+    }
+
+    tag = SECOID_FindOIDTag(&oid);
+    switch (tag) {
+        case SEC_OID_CURVE25519:
+            pubKey->u.ec.encoding = ECPoint_XOnly;
+            break;
+        case SEC_OID_SECG_EC_SECP256R1:
+        /* fall through */
+        case SEC_OID_SECG_EC_SECP384R1:
+        /* fall through */
+        case SEC_OID_SECG_EC_SECP521R1:
+        /* fall through */
+        default:
+            /* unknown curve, default to uncompressed */
+            pubKey->u.ec.encoding = ECPoint_Uncompressed;
+    }
+    return SECSuccess;
 }

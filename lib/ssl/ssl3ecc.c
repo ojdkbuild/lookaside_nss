@@ -303,7 +303,7 @@ ssl3_HandleECDHClientKeyExchange(sslSocket *ss, SSL3Opaque *b,
         serverKeyPair->pubKey->u.ec.DEREncodedParams.len;
     clntPubKey.u.ec.DEREncodedParams.data =
         serverKeyPair->pubKey->u.ec.DEREncodedParams.data;
-    clntPubKey.u.ec.encoding = ECPoint_Undefined;
+    clntPubKey.u.ec.encoding = serverKeyPair->pubKey->u.ec.encoding;
 
     rv = ssl3_ConsumeHandshakeVariable(ss, &clntPubKey.u.ec.publicValue,
                                        1, &b, &length);
@@ -387,7 +387,11 @@ ssl_ImportECDHKeyShare(sslSocket *ss, SECKEYPublicKey *peerKey,
         ssl_MapLowLevelError(SSL_ERROR_RX_MALFORMED_ECDHE_KEY_SHARE);
         return SECFailure;
     }
-    peerKey->u.ec.encoding = ECPoint_Undefined;
+    if (ecGroup->name == ssl_grp_ec_curve25519) {
+        peerKey->u.ec.encoding = ECPoint_XOnly;
+    } else {
+        peerKey->u.ec.encoding = ECPoint_Uncompressed;
+    }
 
     /* copy publicValue in peerKey */
     ecPoint.data = b;
