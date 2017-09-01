@@ -1,6 +1,10 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#define _GNU_SOURCE 1
+#include <stdlib.h>
+
 #include "seccomon.h"
 #include "prio.h"
 #include "prprf.h"
@@ -42,7 +46,7 @@ testdir(char *dir)
 static char *
 getUserDB(void)
 {
-    char *userdir = PR_GetEnvSecure("HOME");
+    char *userdir = secure_getenv("HOME");
     char *nssdir = NULL;
 
     if (userdir == NULL) {
@@ -134,7 +138,7 @@ userCanModifySystemDB()
 static PRBool
 getFIPSEnv(void)
 {
-    char *fipsEnv = PR_GetEnvSecure("NSS_FIPS");
+    char *fipsEnv = secure_getenv("NSS_FIPS");
     if (!fipsEnv) {
         return PR_FALSE;
     }
