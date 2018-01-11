@@ -18,6 +18,7 @@ bridgewithpolicyextensionandmapping.cfg
 realcerts.cfg
 dsa.cfg
 revoc.cfg
+ocsp.cfg
 crldp.cfg
 trustanchors.cfg
 nameconstraints.cfg
