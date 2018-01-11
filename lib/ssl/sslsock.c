@@ -330,6 +330,10 @@ ssl_DupSocket(sslSocket *os)
         ss->getClientAuthDataArg = os->getClientAuthDataArg;
         ss->sniSocketConfig = os->sniSocketConfig;
         ss->sniSocketConfigArg = os->sniSocketConfigArg;
+        ss->alertReceivedCallback = os->alertReceivedCallback;
+        ss->alertReceivedCallbackArg = os->alertReceivedCallbackArg;
+        ss->alertSentCallback = os->alertSentCallback;
+        ss->alertSentCallbackArg = os->alertSentCallbackArg;
         ss->handleBadCert = os->handleBadCert;
         ss->badCertArg = os->badCertArg;
         ss->handshakeCallback = os->handshakeCallback;
@@ -2149,6 +2153,14 @@ SSL_ReconfigFD(PRFileDesc *model, PRFileDesc *fd)
         ss->sniSocketConfig = sm->sniSocketConfig;
     if (sm->sniSocketConfigArg)
         ss->sniSocketConfigArg = sm->sniSocketConfigArg;
+    if (sm->alertReceivedCallback) {
+        ss->alertReceivedCallback = sm->alertReceivedCallback;
+        ss->alertReceivedCallbackArg = sm->alertReceivedCallbackArg;
+    }
+    if (sm->alertSentCallback) {
+        ss->alertSentCallback = sm->alertSentCallback;
+        ss->alertSentCallbackArg = sm->alertSentCallbackArg;
+    }
     if (sm->handleBadCert)
         ss->handleBadCert = sm->handleBadCert;
     if (sm->badCertArg)
@@ -3691,6 +3703,10 @@ ssl_NewSocket(PRBool makeLocks, SSLProtocolVariant protocolVariant)
     ss->sniSocketConfig = NULL;
     ss->sniSocketConfigArg = NULL;
     ss->getClientAuthData = NULL;
+    ss->alertReceivedCallback = NULL;
+    ss->alertReceivedCallbackArg = NULL;
+    ss->alertSentCallback = NULL;
+    ss->alertSentCallbackArg = NULL;
     ss->handleBadCert = NULL;
     ss->badCertArg = NULL;
     ss->pkcs11PinArg = NULL;

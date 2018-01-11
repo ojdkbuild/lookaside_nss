@@ -167,27 +167,69 @@ class TlsExtensionTestBase : public TlsConnectTestBase {
       : TlsConnectTestBase(mode, version) {}
 
   void ClientHelloErrorTest(PacketFilter* filter,
-                            uint8_t alert = kTlsAlertDecodeError) {
+                            uint8_t desc = kTlsAlertDecodeError) {
+    SSLAlert alert;
+
     auto alert_recorder = new TlsAlertRecorder();
     server_->SetPacketFilter(alert_recorder);
     if (filter) {
       client_->SetPacketFilter(filter);
     }
     ConnectExpectFail();
+
     EXPECT_EQ(kTlsAlertFatal, alert_recorder->level());
-    EXPECT_EQ(alert, alert_recorder->description());
+    EXPECT_EQ(desc, alert_recorder->description());
+
+    // verify no alerts received by the server
+    EXPECT_EQ(0U, server_->alert_received_count());
+
+    // verify the alert sent by the server
+    EXPECT_EQ(1U, server_->alert_sent_count());
+    EXPECT_TRUE(server_->GetLastAlertSent(&alert));
+    EXPECT_EQ(kTlsAlertFatal, alert.level);
+    EXPECT_EQ(desc, alert.description);
+
+    // verify the alert received by the client
+    EXPECT_EQ(1U, client_->alert_received_count());
+    EXPECT_TRUE(client_->GetLastAlertReceived(&alert));
+    EXPECT_EQ(kTlsAlertFatal, alert.level);
+    EXPECT_EQ(desc, alert.description);
+
+    // verify no alerts sent by the client
+    EXPECT_EQ(0U, client_->alert_sent_count());
   }
 
   void ServerHelloErrorTest(PacketFilter* filter,
-                            uint8_t alert = kTlsAlertDecodeError) {
+                            uint8_t desc = kTlsAlertDecodeError) {
+    SSLAlert alert;
+
     auto alert_recorder = new TlsAlertRecorder();
     client_->SetPacketFilter(alert_recorder);
     if (filter) {
       server_->SetPacketFilter(filter);
     }
     ConnectExpectFail();
+
     EXPECT_EQ(kTlsAlertFatal, alert_recorder->level());
-    EXPECT_EQ(alert, alert_recorder->description());
+    EXPECT_EQ(desc, alert_recorder->description());
+
+    // verify no alerts received by the client
+    EXPECT_EQ(0U, client_->alert_received_count());
+
+    // verify the alert sent by the client
+    EXPECT_EQ(1U, client_->alert_sent_count());
+    EXPECT_TRUE(client_->GetLastAlertSent(&alert));
+    EXPECT_EQ(kTlsAlertFatal, alert.level);
+    EXPECT_EQ(desc, alert.description);
+
+    // verify the alert received by the server
+    EXPECT_EQ(1U, server_->alert_received_count());
+    EXPECT_TRUE(server_->GetLastAlertReceived(&alert));
+    EXPECT_EQ(kTlsAlertFatal, alert.level);
+    EXPECT_EQ(desc, alert.description);
+
+    // verify no alerts sent by the server
+    EXPECT_EQ(0U, server_->alert_sent_count());
   }
 
   static void InitSimpleSni(DataBuffer* extension) {
