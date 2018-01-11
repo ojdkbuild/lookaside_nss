@@ -183,9 +183,15 @@ static const SSLSignatureScheme defaultSignatureSchemes[] = {
     ssl_sig_ecdsa_secp384r1_sha384,
     ssl_sig_ecdsa_secp521r1_sha512,
     ssl_sig_ecdsa_sha1,
+#if 0
+    /* Disable, while we are waiting for an upstream fix to
+     * https://bugzilla.mozilla.org/show_bug.cgi?id=1311950
+     * (NSS does not check if token supports RSA-PSS before using it to sign)
+     **/
     ssl_sig_rsa_pss_sha256,
     ssl_sig_rsa_pss_sha384,
     ssl_sig_rsa_pss_sha512,
+#endif
     ssl_sig_rsa_pkcs1_sha256,
     ssl_sig_rsa_pkcs1_sha384,
     ssl_sig_rsa_pkcs1_sha512,
@@ -4628,9 +4634,16 @@ ssl_IsSupportedSignatureScheme(SSLSignatureScheme scheme)
         case ssl_sig_rsa_pkcs1_sha256:
         case ssl_sig_rsa_pkcs1_sha384:
         case ssl_sig_rsa_pkcs1_sha512:
+            return PR_TRUE;
+    /* Disable, while we are waiting for an upstream fix to
+     * https://bugzilla.mozilla.org/show_bug.cgi?id=1311950
+     * (NSS does not check if token supports RSA-PSS before using it to sign)
+     **/
         case ssl_sig_rsa_pss_sha256:
         case ssl_sig_rsa_pss_sha384:
         case ssl_sig_rsa_pss_sha512:
+            return PR_FALSE;
+
         case ssl_sig_ecdsa_secp256r1_sha256:
         case ssl_sig_ecdsa_secp384r1_sha384:
         case ssl_sig_ecdsa_secp521r1_sha512:
