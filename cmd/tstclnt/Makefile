@@ -37,6 +37,8 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 
 #include ../platlibs.mk
+INCLUDES += -iquote $(DIST)/../public/nss
+INCLUDES += -iquote $(DIST)/../private/nss
 
 #######################################################################
 # (7) Execute "local" rules. (OPTIONAL).                              #
