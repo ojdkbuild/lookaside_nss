@@ -1269,6 +1269,10 @@ SSLExp_SetMaxEarlyDataSize(PRFileDesc *fd, PRUint32 size)
 static PRBool
 ssl_IsRemovedCipherSuite(PRInt32 suite)
 {
+#ifdef NSS_NO_SSL2
+    if (SSL_IS_SSL2_CIPHER(suite))
+        return PR_TRUE;
+#endif /* NSS_NO_SSL2 */
     switch (suite) {
         case SSL_FORTEZZA_DMS_WITH_NULL_SHA:
         case SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA:

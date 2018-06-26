@@ -60,3 +60,8 @@ endif
 ifdef NSS_DISABLE_TLS_1_3
 DEFINES += -DNSS_DISABLE_TLS_1_3
 endif
+
+ifdef NSS_NO_SSL2
+DEFINES += -DNSS_NO_SSL2
+endif
+
