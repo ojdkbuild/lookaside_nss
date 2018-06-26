@@ -764,6 +764,10 @@ ChangePW(char *tokenName, char *pwFile, char *newpwFile)
             ret = CHANGEPW_FAILED_ERR;
             goto loser;
         }
+    } else if (PK11_IsFIPS() && *newpw == '\0' && PK11_CheckUserPassword(slot, newpw) == SECSuccess) {
+        /* Workaround to suppress harmless error in FIPS mode:
+         * When explicitly setting empty password while the old
+         * password is also empty, skip */
     } else {
         if (PK11_ChangePW(slot, oldpw, newpw) != SECSuccess) {
             PR_fprintf(PR_STDERR, errStrings[CHANGEPW_FAILED_ERR], tokenName);
