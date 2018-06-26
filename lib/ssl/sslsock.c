@@ -1427,7 +1427,6 @@ SSL_CipherPrefGet(PRFileDesc *fd, PRInt32 which, PRBool *enabled)
 SECStatus
 NSS_SetDomesticPolicy(void)
 {
-    SECStatus status = SECSuccess;
     const PRUint16 *cipher;
     SECStatus rv;
     PRUint32 policy;
@@ -1439,11 +1438,9 @@ NSS_SetDomesticPolicy(void)
     }
 
     for (cipher = SSL_ImplementedCiphers; *cipher != 0; ++cipher) {
-        status = SSL_SetPolicy(*cipher, SSL_ALLOWED);
-        if (status != SECSuccess)
-            break;
+        (void) SSL_SetPolicy(*cipher, SSL_ALLOWED);
     }
-    return status;
+    return SECSuccess;
 }
 
 SECStatus
