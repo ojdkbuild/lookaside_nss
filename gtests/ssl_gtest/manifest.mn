@@ -63,6 +63,7 @@ PROGRAM = ssl_gtest
 EXTRA_LIBS += \
       $(DIST)/lib/$(LIB_PREFIX)gtest.$(LIB_SUFFIX) \
       $(DIST)/lib/$(LIB_PREFIX)cpputil.$(LIB_SUFFIX) \
+      -lsoftokn3
       $(NULL)
 
 USE_STATIC_LIBS = 1

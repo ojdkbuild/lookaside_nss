@@ -33,6 +33,5 @@ endif
 
 DIRS = \
 	$(LIB_SRCDIRS) \
-	$(UTIL_SRCDIRS) \
 	$(NSS_SRCDIRS) \
 	$(NULL)
