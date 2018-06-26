@@ -45,6 +45,10 @@ endif
 
 ifdef NSS_INCLUDE_DIR
     INCLUDES += -I$(NSS_INCLUDE_DIR)
+    ifdef IN_TREE_FREEBL_HEADERS_FIRST
+        INCLUDES += -iquote $(DIST)/../public/nss
+        INCLUDES += -iquote $(DIST)/../private/nss
+    endif
 endif
 
 ifndef NSS_LIB_DIR
