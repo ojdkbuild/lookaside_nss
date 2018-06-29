@@ -5125,8 +5125,9 @@ NSC_GenerateKeyPair(CK_SESSION_HANDLE hSession,
                 crv = sftk_AddAttributeType(publicKey, CKA_EC_POINT,
                                             sftk_item_expand(&ecPriv->publicValue));
             } else {
+                SECItem *pubValue;
                 PORT_FreeArena(ecParams->arena, PR_TRUE);
-                SECItem *pubValue = SEC_ASN1EncodeItem(NULL, NULL,
+                pubValue = SEC_ASN1EncodeItem(NULL, NULL,
                                                        &ecPriv->publicValue,
                                                        SEC_ASN1_GET(SEC_OctetStringTemplate));
                 if (!pubValue) {

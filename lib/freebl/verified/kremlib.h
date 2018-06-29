@@ -589,11 +589,13 @@ FStar_UInt128_gte_mask(uint128_t x, uint128_t y)
 typedef FStar_UInt128_uint128 FStar_UInt128_t_, uint128_t;
 
 /* A series of definitions written using pointers. */
+/*
 static inline void
 print128_(const char *where, uint128_t *n)
 {
     KRML_HOST_PRINTF("%s: [0x%08" PRIx64 ",0x%08" PRIx64 "]\n", where, n->high, n->low);
 }
+*/
 
 static inline void
 load128_le_(uint8_t *b, uint128_t *r)
@@ -625,11 +627,13 @@ store128_be_(uint8_t *b, uint128_t *n)
 
 #ifndef KRML_NOSTRUCT_PASSING
 
+/*
 static inline void
 print128(const char *where, uint128_t n)
 {
     print128_(where, &n);
 }
+*/
 
 static inline uint128_t
 load128_le(uint8_t *b)
@@ -661,7 +665,7 @@ store128_be(uint8_t *b, uint128_t n)
 
 #else /* !defined(KRML_STRUCT_PASSING) */
 
-#define print128 print128_
+//#define print128 print128_
 #define load128_le load128_le_
 #define store128_le store128_le_
 #define load128_be load128_be_
